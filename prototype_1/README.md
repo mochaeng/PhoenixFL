@@ -97,6 +97,30 @@ The final result is as follows:
 |       DoS      |   149_633   |
 | Reconnaissance |    23_561   |
 |     Benign     |    1_216    |
-|      Theft     |     24     |
+|      Theft     |     24     | 
 
+# MLP
 
+### Complete dataset
+
+- 927934 records. 
+- **Attack**: 54.5% 
+- **Benign**: 45.4%
+
+### Train set
+
+- 557_376 records (60%).
+- **Attack**: 54.6% 
+- **Benign**: 45.3%
+
+### Evaluation set
+
+- 185_792 records (20%)
+- **Attack**: 54.6% 
+- **Benign**: 45.3%
+
+### Test set
+
+- 185_793 records (20%)
+- **Attack**: 54.6% 
+- **Benign**: 45.3%
