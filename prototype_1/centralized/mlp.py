@@ -8,9 +8,10 @@ import torch.nn.functional as F
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-class MLP(nn.Module):
+
+class PopoolaMLP(nn.Module):
     def __init__(self) -> None:
-        super(MLP, self).__init__()
+        super(PopoolaMLP, self).__init__()
         self.fc1 = nn.Linear(41, 128)
         self.fc2 = nn.Linear(128, 128)
         self.fc3 = nn.Linear(128, 1)
@@ -21,15 +22,30 @@ class MLP(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.fc3(x)
-        # x = F.sigmoid(x)
+        # x = F.sigmoid(x)  # using BCEWithLogitsLoss 
         return x
+    
+
+class FnidsMLP(nn.Module):
+    def __init__(self) -> None:
+        super(FnidsMLP, self).__init__()
+        self.fc1 = nn.Linear(41, 160)
+        self.fc2 = nn.Linear(160, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        # x = F.sigmoid(x)  # using BCEWithLogitsLoss 
+        return x
+
     
 class NetHelper:
 
-    def __init__(self, model: MLP, data: dict, lr=0.0001, batch_size=32, epochs=10, device="cuda") -> None:
+    def __init__(self, model: nn.Module, data: dict, lr=0.0001, batch_size=32, epochs=10, device="cuda") -> None:
         self.lr = lr
         self.epochs = epochs
-        self.model: MLP = model
+        self.model: nn.Module = model
         self.batch_size = batch_size
         self.device = device
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
@@ -38,9 +54,9 @@ class NetHelper:
         self.train_loader, self.eval_loader, self.test_loader = self.load_data(data)
 
     
-    def train(self, num_epochs=10):
+    def train(self):
 
-        for epoch in range(num_epochs):
+        for epoch in range(self.epochs):
             self.model.train()
             total_loos = 0.0
             for batch_idx, (inputs, labels) in enumerate(self.train_loader):
