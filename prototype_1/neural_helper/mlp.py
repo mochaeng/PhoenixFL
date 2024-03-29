@@ -48,7 +48,9 @@ class NetHelper:
         self.model: nn.Module = model
         self.batch_size = batch_size
         self.device = device
-        self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
+
+        # self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9)
         self.criterion = nn.BCEWithLogitsLoss()
 
         self.train_loader, self.eval_loader, self.test_loader = self.load_data(data)
