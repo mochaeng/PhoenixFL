@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from .utils import PATH_SCALER, PATH_CENTRALIZED_MODEL,  TARGET_NAME, get_standarlize_data, PATH_BOT_DATASET, PATH_TON_DATASET, PATH_UNSW_DATASET
 
-from ..neural_helper import mlp
+from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, test, DEVICE, load_data
 
 
 if __name__ == "__main__":
@@ -23,15 +23,13 @@ if __name__ == "__main__":
         df = df.drop_duplicates()
 
         data = get_standarlize_data(df, PATH_SCALER)
+        train_loader, eval_loader, test_loader = load_data(data)
 
-        device = "cuda"
-        model = mlp.PopoolaMLP().to(device=device)
-        # model = FnidsMLP().to(device=device)
+        model = PopoolaMLP().to(device=DEVICE)
 
         model.load_state_dict(torch.load(PATH_CENTRALIZED_MODEL))
         model.eval()
-
-        net_helper = mlp.NetHelper(model=model, data=data, device=device)
-
-        print(f'Evaluation: {net_helper.test(is_evaluation=True)}')
-        print(f'Testing: {net_helper.test(is_evaluation=False)}')
+        
+        test(model, eval_loader)
+        print(f'Evaluation: {test(model, eval_loader)}')
+        print(f'Testing: {test(model, test_loader)}')

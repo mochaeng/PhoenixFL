@@ -1,12 +1,12 @@
-import pandas as pd
-
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, dataset
 import torch.nn as nn
 import torch.nn.functional as F
 
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
+
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+CRITERION = torch.nn.BCEWithLogitsLoss
+OPTIMIZER = torch.optim.SGD
 
 
 class PopoolaMLP(nn.Module):
@@ -22,7 +22,7 @@ class PopoolaMLP(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.fc3(x)
-        # x = F.sigmoid(x)  # using BCEWithLogitsLoss 
+        # x = F.sigmoid(x)
         return x
     
 
@@ -39,81 +39,79 @@ class FnidsMLP(nn.Module):
         # x = F.sigmoid(x)  # using BCEWithLogitsLoss 
         return x
 
+
+def load_data(data: dict, batch_size=32):
+    x_train_tensor = torch.tensor(data["X_train"], dtype=torch.float32)
+    y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
+    x_eval_tensor = torch.tensor(data["X_eval"], dtype=torch.float32)
+    y_eval_tensor = torch.tensor(data["y_eval"], dtype=torch.float32).view(-1, 1)
+    x_test_tensor = torch.tensor(data["X_test"], dtype=torch.float32)
+    y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
+
+    train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
+    eval_dataset = TensorDataset(x_eval_tensor, y_eval_tensor)
+    test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
+
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+    eval_loader = DataLoader(eval_dataset, batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
     
-class NetHelper:
+    return train_loader, eval_loader, test_loader
 
-    def __init__(self, model: nn.Module, data: dict, lr=0.0001, batch_size=32, epochs=10, device="cuda") -> None:
-        self.lr = lr
-        self.epochs = epochs
-        self.model: nn.Module = model
-        self.batch_size = batch_size
-        self.device = device
 
-        # self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9)
-        self.criterion = nn.BCEWithLogitsLoss()
-
-        self.train_loader, self.eval_loader, self.test_loader = self.load_data(data)
-
+def train(
+    net: nn.Module, 
+    trainloader, 
+    epochs: int=10, 
+    lr=0.0001, 
+    momentum=0.9, 
+    is_verbose=True,
+):
+    criterion = CRITERION()
+    optimizer = OPTIMIZER(net.parameters(), lr=lr, momentum=momentum)
     
-    def train(self):
-
-        for epoch in range(self.epochs):
-            self.model.train()
-            total_loos = 0.0
-            for batch_idx, (inputs, labels) in enumerate(self.train_loader):
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels)
-                loss.backward()
-                self.optimizer.step()
-
-                total_loos += loss.item()
-
-            avg_loss = total_loos / len(self.train_loader)
-            print(f'Epoch [{epoch+1}], AVG: {avg_loss}')
-
-        return loss.data
-
-    def test(self, is_evaluation: bool):
-        if is_evaluation:
-            test_loader = self.eval_loader
-        else:
-            test_loader = self.test_loader
+    net.train()
+    for epoch in range(epochs):
+        correct, total, epoch_loss = 0, 0, 0.0
+        for batch_idx, (inputs, labels) in enumerate(trainloader):
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(net(inputs), labels)
+            loss.backward()
+            optimizer.step()
+            
+            epoch_loss += loss
+            total += labels.size(0)
+            round_outputs = torch.round(torch.sigmoid(outputs))
+            correct += (round_outputs == labels).sum().item()
+            
+        epoch_loss /= len(trainloader.dataset)
+        epoch_acc = correct / total
         
-        self.model.eval()
+        if is_verbose:
+            print(f"Epoch {epoch+1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
-        correct, total = 0, 0
-        with torch.no_grad():
-            for data in test_loader:
-                inputs, labels = data[0].to(self.device), data[1].to(self.device)
 
-                outputs = self.model(inputs)
-                # predicted = (torch.sigmoid(outputs) > 0.5).float()
-                predicted = torch.round(torch.sigmoid(outputs))
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-        accurcy = correct / total
-        return accurcy
-
-    def load_data(self, data: dict):
-        x_train_tensor = torch.tensor(data["X_train"], dtype=torch.float32)
-        y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
-        x_eval_tensor = torch.tensor(data["X_eval"], dtype=torch.float32)
-        y_eval_tensor = torch.tensor(data["y_eval"], dtype=torch.float32).view(-1, 1)
-        x_test_tensor = torch.tensor(data["X_test"], dtype=torch.float32)
-        y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
-
-        train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-        eval_dataset = TensorDataset(x_eval_tensor, y_eval_tensor)
-        test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
-
-        train_loader = DataLoader(train_dataset, self.batch_size, shuffle=True)
-        eval_loader = DataLoader(eval_dataset, self.batch_size, shuffle=False)
-        test_loader = DataLoader(test_dataset, self.batch_size, shuffle=False)
-
-        return train_loader, eval_loader, test_loader
+def test(
+    net: nn.Module, 
+    testloader,
+):
+    criterion = CRITERION()
+    correct, total, loss = 0, 0, 0.0
+    net.eval()
+    with torch.no_grad():
+        for inputs, labels in testloader:
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            
+            outputs = net(inputs)
+            loss += criterion(outputs, labels).item()
+            predicted = torch.round(torch.sigmoid(outputs.data))
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            
+    loss /= len(testloader.dataset)
+    accuracy = correct / total
+    return loss, accuracy
     

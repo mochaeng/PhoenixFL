@@ -3,7 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import torch
 
-from ..neural_helper import mlp
+from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, train, test, load_data, DEVICE
 from .utils import PATH_CENTRALIZED_DATASET, get_aggregate_data, PATH_SCALER, PATH_CENTRALIZED_MODEL
 
 
@@ -13,15 +13,15 @@ if __name__ == "__main__":
     df = df.drop_duplicates()
 
     data = get_aggregate_data(df, PATH_SCALER)
+    train_loader, eval_loader, test_loader = load_data(data, batch_size=512)
+    
+    model = PopoolaMLP().to(device=DEVICE)
 
-    device = "cuda"
-    model = mlp.PopoolaMLP().to(device=device)
-    # model = FnidsMLP().to(device=device)
+    train(model, train_loader, epochs=10, lr=0.02)
+    # net_helper = DetectorModel(model=model, data=data, device=device, lr=0.02)
+    # net_helper.train(is_verbose=True)
 
-    net_helper = mlp.NetHelper(model=model, data=data, device=device, batch_size=512, lr=0.02)
-    net_helper.train()
+    print(f'Evaluation: {test(model, eval_loader)}')
+    print(f'Testing: {test(model, test_loader)}')
 
-    print(f'Evaluation: {net_helper.test(is_evaluation=True)}')
-    print(f'Testing: {net_helper.test(is_evaluation=False)}')
-
-    torch.save(net_helper.model.state_dict(), PATH_CENTRALIZED_MODEL)
+    torch.save(model.state_dict(), PATH_CENTRALIZED_MODEL)
