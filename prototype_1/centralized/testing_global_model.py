@@ -1,9 +1,11 @@
 
 import pandas as pd
 import torch
-from .utils import PATH_SCALER, PATH_CENTRALIZED_MODEL,  TARGET_NAME, get_standarlize_data, PATH_BOT_DATASET, PATH_TON_DATASET, PATH_UNSW_DATASET
+import joblib
 
-from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, test, DEVICE, load_data
+from .utils import get_standardized_data
+from ..pre_process import PATH_CENTRALIZED_MODEL, TARGET_NAME, PATH_BOT_DATASET, PATH_TON_DATASET, PATH_UNSW_DATASET, PATH_SCALER
+from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, test_metrics, DEVICE, load_data
 
 
 if __name__ == "__main__":
@@ -13,6 +15,8 @@ if __name__ == "__main__":
         ("client-2: BoT", PATH_BOT_DATASET), 
         ("client-3: UNSW", PATH_UNSW_DATASET),
     ]
+    
+    scaler = joblib.load(PATH_SCALER)
 
     for dataset_name, dataset_path in datasets_paths:
         print("\nEvaluating centralized trained dataset")
@@ -22,7 +26,7 @@ if __name__ == "__main__":
         df = df.drop(columns=[TARGET_NAME])
         df = df.drop_duplicates()
 
-        data = get_standarlize_data(df, PATH_SCALER)
+        data = get_standardized_data(df, scaler)
         train_loader, eval_loader, test_loader = load_data(data)
 
         model = PopoolaMLP().to(device=DEVICE)
@@ -30,6 +34,6 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(PATH_CENTRALIZED_MODEL))
         model.eval()
         
-        test(model, eval_loader)
-        print(f'Evaluation: {test(model, eval_loader)}')
-        print(f'Testing: {test(model, test_loader)}')
+        test_metrics(model, eval_loader)
+        print(f'\nEvaluation: {test_metrics(model, eval_loader)}')
+        print(f'Testing: {test_metrics(model, test_loader)}')

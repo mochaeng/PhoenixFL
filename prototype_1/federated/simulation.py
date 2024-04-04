@@ -7,8 +7,8 @@ from collections import OrderedDict
 
 from typing import List, Tuple, Any
 
-from ..neural_helper.mlp import PopoolaMLP, train, test
-from .utils import get_all_federated_loaders
+from ..neural_helper.mlp import PopoolaMLP, train, test_metrics
+from .utils_fl import get_all_federated_loaders
 
 
 def get_parameters(net) -> List[np.ndarray]:
@@ -22,11 +22,13 @@ def set_parameters(net, parameters: List[np.ndarray]):
     
 
 class FlowerNumPyClient(fl.client.NumPyClient):
-    def __init__(self, cid, net, train_loader, eval_loader):
+    def __init__(self, cid, net, train_loader, eval_loader, lr, momentum):
         self.cid = cid
         self.net = net
         self.train_loader = train_loader
         self.eval_loader = eval_loader
+        self.lr = lr
+        self.momentum = momentum
 
     def get_parameters(self, config):
         print(f"[Client {self.cid}] get_parameters")
@@ -35,13 +37,13 @@ class FlowerNumPyClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         print(f"[Client {self.cid}] fit, config: {config}")
         set_parameters(self.net, parameters)
-        train(self.net, self.train_loader, lr=0.02)
+        train(self.net, self.train_loader, lr=self.lr, momentum=self.momentum)
         return get_parameters(self.net), len(self.train_loader), {}
 
     def evaluate(self, parameters, config):
         print(f"[Client {self.cid}] evaluate, config: {config}")
         set_parameters(self.net, parameters)
-        loss, accuracy = test(self.net, self.eval_loader)
+        loss, accuracy = test_metrics(self.net, self.eval_loader)
         return float(loss), len(self.eval_loader), {"accuracy": float(accuracy)}
 
     
@@ -51,8 +53,11 @@ def client_fn(cid: str):
     
     print(f"\nEstou chamada {cid} | {idx}")
     
+    lr = 0.001
+    momentum = 0.9
+    
     model = PopoolaMLP().to(DEVICE)
-    return FlowerNumPyClient(cid, model, train_loader, eval_loader).to_client()
+    return FlowerNumPyClient(cid, model, train_loader, eval_loader, lr, momentum).to_client()
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -78,7 +83,7 @@ if __name__ == "__main__":
     fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=3,
-        config=fl.server.ServerConfig(num_rounds=5),
+        config=fl.server.ServerConfig(num_rounds=10),
         strategy=strategy,
         client_resources=clients_resources,
     )

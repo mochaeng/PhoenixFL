@@ -1,7 +1,7 @@
 from typing import Dict
 from flwr.common import NDArrays
-from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, load_data, train, test, DEVICE
-from .utils import get_all_federated_loaders
+from ..neural_helper.mlp import PopoolaMLP, FnidsMLP, load_data, train, test_metrics, DEVICE
+from .utils_fl import get_all_federated_loaders
 
 from collections import OrderedDict
 import torch
@@ -25,12 +25,12 @@ class Client(fl.client.NumPyClient):
         
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        train(model, self.train_loader, epochs=1)
+        train(self.model, self.train_loader, epochs=1)
         return self.get_parameters(config={}), len(self.train_loader), {}
     
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = test(model, self.eval_loader)
+        loss, accuracy = test_metrics(self.model, self.eval_loader)
         return float(loss), len(self.eval_loader), {"accuracy": float(accuracy)}
 
 
@@ -44,5 +44,4 @@ if __name__ == "__main__":
         server_address="[::]:8080",
         client=Client(model, train_loader=train_loader, eval_loader=eval_loader).to_client(),
     )
-    
     

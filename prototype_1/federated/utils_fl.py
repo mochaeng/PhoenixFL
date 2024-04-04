@@ -31,12 +31,18 @@ def _get_all_federated_client_data():
         X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.4, random_state=69, stratify=y)
         X_eval, X_test, y_eval, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp)
         
+        scaler = StandardScaler()
+        scaler.fit(X_train)
+        X_train_scaled = scaler.transform(X_train)
+        X_eval_scaled = scaler.transform(X_eval)
+        X_test_scaled = scaler.transform(X_test)
+        
         all_data[idx] = {
-            "X_train": X_train,
+            "X_train": X_train_scaled,
             "y_train": y_train,
-            "X_eval": X_eval,
+            "X_eval": X_eval_scaled,
             "y_eval": y_eval,
-            "X_test": X_test,
+            "X_test": X_test_scaled,
             "y_test": y_test,
         }
     return all_data       
