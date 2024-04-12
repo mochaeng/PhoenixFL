@@ -17,13 +17,18 @@ PATH_BOT_DATASET = "datasets/pre-processed/NF-BoT-IoT-v2.parquet"
 # PATH_BOT_DATASET = "../../datasets/pre-processed/NF-BoT-IoT-v2.parquet"
 
 
-DATASETS: list[tuple[str, str]] = [
+# DATASETS: list[tuple[str, str]] = [
+#     ("client-1: ToN", PATH_TON_DATASET),
+#     ("client-2: BoT", PATH_BOT_DATASET),
+#     ("client-3: UNSW", PATH_UNSW_DATASET),
+# ]
+# DATASETS = [PATH_TON_DATASET, PATH_BOT_DATASET, PATH_UNSW_DATASET]
+
+DATASETS = [
     ("client-1: ToN", PATH_TON_DATASET),
     ("client-2: BoT", PATH_BOT_DATASET),
     ("client-3: UNSW", PATH_UNSW_DATASET),
 ]
-# DATASETS = [PATH_TON_DATASET, PATH_BOT_DATASET, PATH_UNSW_DATASET]
-
 
 def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
