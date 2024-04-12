@@ -42,7 +42,7 @@ def set_parameters(net, parameters: List[np.ndarray]):
 
 def get_all_federated_loaders(
     batch_size=32,
-) -> dict[int, Tuple[Tuple, Tuple[DataLoader, DataLoader]]]:
+) -> 'dict[int, Tuple[Tuple, Tuple[DataLoader, DataLoader]]]':
     def _get_all_federated_client_data():
         all_data: Dict[int, Tuple[str, Dict]] = {}
         for idx, (dataset_name, path) in enumerate(DATASETS):
