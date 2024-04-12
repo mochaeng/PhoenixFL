@@ -3,18 +3,19 @@ from torch.utils.data import DataLoader, TensorDataset
 from typing import Tuple, List, Dict
 import numpy as np
 from collections import OrderedDict
+import os
 
-from ..pre_process import read_dataset, TARGET_NAME, get_standardized_data
+from ..pre_process import read_dataset, COLUMN_TO_REMOVE, get_standardized_data
 
+NUM_CLIENTS = 3
+NUM_ROUNDS = 3
+PATH_TO_METRICS_FOLDER = "./prototype_1/federated/metrics"
+TEMP_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "temp_metrics.txt")
+METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "metrics.json")
 
 PATH_TON_DATASET = "datasets/pre-processed/NF-ToN-IoT-v2.parquet"
 PATH_UNSW_DATASET = "datasets/pre-processed/NF-UNSW-NB15-v2.parquet"
 PATH_BOT_DATASET = "datasets/pre-processed/NF-BoT-IoT-v2.parquet"
-
-# for pycharm debugger
-# PATH_TON_DATASET = "../../datasets/pre-processed/NF-ToN-IoT-v2.parquet"
-# PATH_UNSW_DATASET = "../../datasets/pre-processed/NF-UNSW-NB15-v2.parquet"
-# PATH_BOT_DATASET = "../../datasets/pre-processed/NF-BoT-IoT-v2.parquet"
 
 
 DATASETS: list[tuple[str, str]] = [
@@ -22,7 +23,6 @@ DATASETS: list[tuple[str, str]] = [
     ("client-2: BoT", PATH_BOT_DATASET),
     ("client-3: UNSW", PATH_UNSW_DATASET),
 ]
-# DATASETS = [PATH_TON_DATASET, PATH_BOT_DATASET, PATH_UNSW_DATASET]
 
 
 def get_parameters(net) -> List[np.ndarray]:
@@ -41,7 +41,7 @@ def get_all_federated_loaders(
     def _get_all_federated_client_data():
         all_data: Dict[int, Tuple[str, Dict]] = {}
         for idx, (dataset_name, path) in enumerate(DATASETS):
-            df = read_dataset(path, TARGET_NAME)
+            df = read_dataset(path, COLUMN_TO_REMOVE)
             data_std, _ = get_standardized_data(df)
             all_data[idx] = (dataset_name, data_std)
         return all_data

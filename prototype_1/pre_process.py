@@ -13,7 +13,11 @@ PATH_UNSW_DATASET = "datasets/pre-processed/NF-UNSW-NB15-v2.parquet"
 PATH_BOT_DATASET = "datasets/pre-processed/NF-BoT-IoT-v2.parquet"
 PATH_CENTRALIZED_DATASET = "datasets/pre-processed/centralized.parquet"
 
-TARGET_NAME = "Attack"
+COLUMN_TO_REMOVE = "Attack"
+
+
+CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW"]
+METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
 
 def read_dataset(path: str, target_column: str) -> pd.DataFrame:

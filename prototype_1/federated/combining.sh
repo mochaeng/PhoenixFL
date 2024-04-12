@@ -3,4 +3,4 @@
 relative_path="$(dirname "$0")"
 cd "$relative_path/../../"
 
-python -m prototype_1.federated.simulation
+python -m prototype_1.federated.combining

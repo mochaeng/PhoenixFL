@@ -1,7 +1,7 @@
 import json
 
 from ..pre_process import (
-    TARGET_NAME,
+    COLUMN_TO_REMOVE,
     PATH_BOT_DATASET,
     PATH_TON_DATASET,
     PATH_UNSW_DATASET,
@@ -23,7 +23,7 @@ def _print_headers(msg: str):
 
 
 def load_centralized_data(batch_size: int):
-    df = read_dataset(PATH_CENTRALIZED_DATASET, TARGET_NAME)
+    df = read_dataset(PATH_CENTRALIZED_DATASET, COLUMN_TO_REMOVE)
 
     data, scaler = get_standardized_data(df)
     train_loader, eval_loader, test_loader = load_data(data, batch_size)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         print(f"\nEvaluating {num_model+1} model among clients")
 
         for dataset_name, dataset_path in datasets_paths:
-            df = read_dataset(dataset_path, TARGET_NAME)
+            df = read_dataset(dataset_path, COLUMN_TO_REMOVE)
             data, _ = get_standardized_data(df, server_data["scaler"])
 
             _, _, test_loader = load_data(data, batch_size)
