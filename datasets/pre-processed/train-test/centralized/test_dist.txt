@@ -1,0 +1,37 @@
+test
+Attack
+Benign                      120590
+DDoS                         21999
+DoS                          20182
+scanning                     11344
+xss                           7365
+ddos                          6079
+Reconnaissance                3528
+password                      3460
+DDOS attack-HOIC              2162
+dos                           2138
+injection                     2054
+Exploits                       947
+DoS attacks-Hulk               865
+Fuzzers                        669
+DDoS attacks-LOIC-HTTP         615
+Generic                        497
+Bot                            286
+Infilteration                  233
+SSH-Bruteforce                 190
+Analysis                        69
+Backdoor                        65
+DoS attacks-GoldenEye           55
+FTP-BruteForce                  52
+backdoor                        50
+Shellcode                       43
+DoS attacks-SlowHTTPTest        28
+mitm                            23
+DoS attacks-Slowloris           19
+ransomware                      10
+Worms                            5
+Brute Force -Web                 4
+DDOS attack-LOIC-UDP             4
+Theft                            3
+Brute Force -XSS                 2
+SQL Injection                    1

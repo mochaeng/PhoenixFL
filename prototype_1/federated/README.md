@@ -2,16 +2,38 @@
 
 ## Overview
 
-The goal is to evaluate federated learning (FL) technique to train a more robust model for heterogeneous networks.
+This part deals with the process of training a **Multilayer Perceptron (MLP)** using the federated learning approach. A simulation is conducted using the Flower simulation module. In this approach, each client trains a local model on its own data. The server then collects these models and aggregates them into a single global model. This global model is then used for federated evaluation on each client's test set.
 
-> The file [simulation.py](simulation.py) contains the code for simulating the training of a machine learning (ML) model using FL. At each round, a federated evaluation is conducted amoung the clients. The metrics evaluated for a given client in a particular round are saved to a txt file called _temp_metrics.txt_.
+The code supports two aggregation algorithms: the classic `FedAvg` and `FedProx`.
 
-> The file [aggregating_metrics.py](aggregating_metrics.py) is responsible for reading the _temp_metrics.txt_ file and aggregated the metrics in a more readable format (e.g. json). That file is _metrics.json_. 
+## Simulation
 
-## Running
+The [`main.py`](main.py) script loads data from each client to conduct the simulation process. In each round, clients train a local model for `E` epochs. The server then aggregates the models using a chosen strategy (e.g., `FedAvg` or `FedProx`). Finally, a federated evaluation is performed at the end of the round.
+
+> Run from the project root directory !
+
+The program can be executed with various options to control the federated learning simulation:
+
+- To train a model with 10 rounds of federated learning:
+
+    ```sh
+    python -m prototype_1.federated.main --num-rounds 10
+    ```
+- To save the federated evaluation metrics from each client in a `JSON` file:
+
+    ```sh
+    python -m prototype_1.federated.main --num-rounds 10 --save-results true
+    ```
+- To use the `FedProx` strategy for aggregation:
+
+    ```sh
+    python -m prototype_1.federated.main --algo fedprox --mu 1.0
+    ```
+
+<!-- ## Running
 
 To simulate the training of 2 models with 3 rounds each, run:
 
 ```sh
 bash fl_pipeline.sh -m 2 -r 3
-```
+``` -->

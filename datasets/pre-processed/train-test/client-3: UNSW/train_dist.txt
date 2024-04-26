@@ -1,0 +1,12 @@
+train
+Attack
+Benign            275426
+Exploits            3786
+Fuzzers             2677
+Generic             1987
+Reconnaissance      1534
+DoS                  695
+Analysis             276
+Backdoor             260
+Shellcode            171
+Worms                 20

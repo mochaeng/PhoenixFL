@@ -43,15 +43,13 @@ if [[ $(is_valid_number number_of_runs) -eq 0 || $(is_valid_number number_of_rou
 fi
 
 relative_path="$(dirname "$0")"
-cd "$relative_path/../../"
+cd "$relative_path/../../" || exit
 
 temp_metrics_file_path="prototype_1/federated/metrics/temp_metrics.txt"
 federated_path="prototype_1.federated"
 
 simulation_file="simulation"
 aggregating_metrics_file="aggregating_metrics"
-
-
 simulation_module="${federated_path}.${simulation_file}"
 aggregating_metrics_module="${federated_path}.${aggregating_metrics_file}"
 
@@ -68,8 +66,8 @@ for (( i=1; i<=number_of_runs; i++ )); do
     fi
 done
 
-echo -e "\nThe training process of ${number_of_runs} federated models has finished."
-echo "Starting to aggregate metrics into a json file"
+echo -e "\nTraining process of ${number_of_runs} federated models has finished."
+echo "Starting to aggregate metrics into a json file..."
 
 python -m "${aggregating_metrics_module}" --num-models "${number_of_runs}" --num-rounds "${number_of_rounds}" &
 wait $!

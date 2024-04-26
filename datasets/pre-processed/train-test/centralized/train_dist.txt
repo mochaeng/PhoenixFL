@@ -1,0 +1,37 @@
+train
+Attack
+Benign                      482351
+DDoS                         87992
+DoS                          80726
+scanning                     45377
+xss                          29460
+ddos                         24315
+Reconnaissance               14115
+password                     13840
+DDOS attack-HOIC              8647
+dos                           8551
+injection                     8213
+Exploits                      3786
+DoS attacks-Hulk              3461
+Fuzzers                       2677
+DDoS attacks-LOIC-HTTP        2458
+Generic                       1987
+Bot                           1145
+Infilteration                  931
+SSH-Bruteforce                 760
+Analysis                       276
+Backdoor                       260
+DoS attacks-GoldenEye          222
+FTP-BruteForce                 207
+backdoor                       202
+Shellcode                      171
+DoS attacks-SlowHTTPTest       113
+mitm                            93
+DoS attacks-Slowloris           76
+ransomware                      41
+Worms                           20
+DDOS attack-LOIC-UDP            17
+Brute Force -Web                17
+Theft                           12
+Brute Force -XSS                 7
+SQL Injection                    3

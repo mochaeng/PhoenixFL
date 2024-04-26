@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import DataLoader, TensorDataset, dataset
+from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 import torch.nn.functional as F
 from torcheval.metrics import (
@@ -8,12 +8,12 @@ from torcheval.metrics import (
     BinaryRecall,
     BinaryF1Score,
 )
-
-from typing import Dict
+import copy
+from typing import Dict, Iterator, Tuple
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
-OPTIMIZER = torch.optim.SGD
+# OPTIMIZER = torch.optim.SGD
 
 
 class PopoolaMLP(nn.Module):
@@ -41,58 +41,95 @@ class FnidsMLP(nn.Module):
     def __init__(self) -> None:
         super(FnidsMLP, self).__init__()
         self.fc1 = nn.Linear(41, 160)
+        self.norm1 = nn.LayerNorm(160)
         self.fc2 = nn.Linear(160, 1)
 
     def forward(self, x):
         x = self.fc1(x)
+        x = self.norm1(x)
         x = F.relu(x)
         x = self.fc2(x)
         # x = F.sigmoid(x)  # using BCEWithLogitsLoss
         return x
 
 
-def load_data(data: dict, batch_size=32):
-    x_train_tensor = torch.tensor(data["X_train"], dtype=torch.float32)
+def get_train_and_test_loaders(
+    data: dict, batch_size=32
+) -> Tuple[DataLoader, DataLoader]:
+    x_train_tensor = torch.tensor(data["x_train"], dtype=torch.float32)
     y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
-    x_eval_tensor = torch.tensor(data["X_eval"], dtype=torch.float32)
-    y_eval_tensor = torch.tensor(data["y_eval"], dtype=torch.float32).view(-1, 1)
-    x_test_tensor = torch.tensor(data["X_test"], dtype=torch.float32)
+    x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
     y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
 
     train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-    eval_dataset = TensorDataset(x_eval_tensor, y_eval_tensor)
     test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
 
     train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-    eval_loader = DataLoader(eval_dataset, batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
 
-    return train_loader, eval_loader, test_loader
+    return train_loader, test_loader
+
+
+def get_test_loader(data: dict, batch_size=32):
+    x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
+    y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
+    test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
+    return test_loader
+
+
+def calculate_proximal_term(
+    local_model: nn.Module, global_params: Iterator[nn.Parameter]
+):
+    proximal_term = 0
+    for local_weights, global_weights in zip(local_model.parameters(), global_params):
+        proximal_term += (local_weights - global_weights).norm(2)
+    return proximal_term
 
 
 def train(
     net: nn.Module,
     trainloader,
-    epochs: int = 10,
-    lr=1e-4,
-    momentum=9e-1,
-    weight_decay=1e-5,
+    train_config={"epochs": 10, "lr": 1e-4, "momentum": 0.9, "weight_decay": 1e-5},
     is_verbose=True,
 ):
     criterion = CRITERION()
-    optimizer = OPTIMIZER(
-        net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay
-    )
+
+    if train_config.get("optimizer") == "adam":
+        optimizer = torch.optim.Adam(
+            net.parameters(),
+            lr=train_config["lr"],
+            weight_decay=train_config["weight_decay"],
+        )
+    else:
+        optimizer = torch.optim.SGD(
+            net.parameters(),
+            lr=train_config["lr"],
+            momentum=train_config["momentum"],
+            weight_decay=train_config["weight_decay"],
+        )
+
+    if "proximal_mu" in train_config:
+        global_params = copy.deepcopy(net).parameters()
 
     net.train()
-    for epoch in range(epochs):
+    for epoch in range(train_config["epochs"]):
         correct, total, epoch_loss = 0, 0, 0.0
         for batch_idx, (inputs, labels) in enumerate(trainloader):
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
 
             optimizer.zero_grad()
             outputs = net(inputs)
-            loss = criterion(net(inputs), labels)
+
+            if "proximal_mu" in train_config:
+                proximal_term = calculate_proximal_term(net, global_params)
+                loss = (
+                    criterion(outputs, labels)
+                    + (train_config["proximal_mu"] / 2) * proximal_term
+                )
+            else:
+                loss = criterion(outputs, labels)
+
             loss.backward()
             optimizer.step()
 
@@ -106,9 +143,6 @@ def train(
 
         if is_verbose:
             print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
-
-
-MLP = PopoolaMLP
 
 
 def collect_metrics(net: nn.Module, testloader) -> Dict[str, float]:
@@ -151,3 +185,6 @@ def collect_metrics(net: nn.Module, testloader) -> Dict[str, float]:
     }
 
     return metrics
+
+
+MLP = PopoolaMLP

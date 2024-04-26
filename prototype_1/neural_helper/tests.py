@@ -10,7 +10,46 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
-from .mlp import PopoolaMLP, DEVICE, load_data
+from .mlp import PopoolaMLP, DEVICE, get_train_and_test_loaders, MLP
+
+
+def _load_eval_loader():
+    data = _get_data()
+    _, eval_loader, _ = get_train_and_test_loaders(data, batch_size=32)
+    return eval_loader
+
+
+def _get_data():
+    df = pd.read_parquet(DATA_PATH)
+    df = df.drop(columns=["Attack"])
+    df = df.drop_duplicates()
+
+    X = df.iloc[:, :-1].values
+    y = df.iloc[:, -1:].values
+
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.4, random_state=69, stratify=y
+    )
+    X_eval, X_test, y_eval, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp
+    )
+
+    scaler = StandardScaler()
+    scaler.fit(X_train)
+    X_train_scaled = scaler.transform(X_train)
+    X_eval_scaled = scaler.transform(X_eval)
+    X_test_scaled = scaler.transform(X_test)
+
+    data = {
+        "X_train": X_train_scaled,
+        "y_train": y_train,
+        "X_eval": X_eval_scaled,
+        "y_eval": y_eval,
+        "X_test": X_test_scaled,
+        "y_test": y_test,
+    }
+
+    return data
 
 
 class MetricsTests(unittest.TestCase):
@@ -114,52 +153,24 @@ class MetricsTests(unittest.TestCase):
         self.assertAlmostEqual(equation, f1_score.compute().item(), places=5)
 
 
-def _load_eval_loader():
-    data = _get_data()
-    _, eval_loader, _ = load_data(data, batch_size=32)
-    return eval_loader
+class MLPTest(unittest.TestCase):
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+        self.net = MLP().to(DEVICE)
+        self.single_example = _get_data()["X_train"][0]
 
-
-def _get_data():
-    df = pd.read_parquet(DATA_PATH)
-    df = df.drop(columns=["Attack"])
-    df = df.drop_duplicates()
-
-    X = df.iloc[:, :-1].values
-    y = df.iloc[:, -1:].values
-
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.4, random_state=69, stratify=y
-    )
-    X_eval, X_test, y_eval, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp
-    )
-
-    scaler = StandardScaler()
-    scaler.fit(X_train)
-    X_train_scaled = scaler.transform(X_train)
-    X_eval_scaled = scaler.transform(X_eval)
-    X_test_scaled = scaler.transform(X_test)
-
-    data = {
-        "X_train": X_train_scaled,
-        "y_train": y_train,
-        "X_eval": X_eval_scaled,
-        "y_eval": y_eval,
-        "X_test": X_test_scaled,
-        "y_test": y_test,
-    }
-
-    return data
+    def test_forward_single_example(self):
+        t = torch.tensor(self.single_example, dtype=torch.float32).to(DEVICE)
+        print(self.net(t))
 
 
 if __name__ == "__main__":
     DATA_PATH = "datasets/pre-processed/centralized.parquet"
     # DATA_PATH = "../../datasets/pre-processed/centralized.parquet"
 
-    # suite = unittest.TestSuite()
-    # suite.addTest(MetricsTests("test_f1_score"))
-    # runner = unittest.TextTestRunner()
-    # runner.run(suite)
+    suite = unittest.TestSuite()
+    suite.addTest(MLPTest("test_forward_single_example"))
+    runner = unittest.TextTestRunner()
+    runner.run(suite)
 
-    unittest.main()
+    # unittest.main()

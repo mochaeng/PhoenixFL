@@ -1,0 +1,12 @@
+test
+Attack
+Benign        18299
+scanning      11344
+xss            7365
+ddos           6079
+password       3460
+dos            2138
+injection      2054
+backdoor         50
+mitm             23
+ransomware       10

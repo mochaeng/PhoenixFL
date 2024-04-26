@@ -1,0 +1,7 @@
+train
+Attack
+DDoS              87992
+DoS               80031
+Reconnaissance    12581
+Benign              648
+Theft                12

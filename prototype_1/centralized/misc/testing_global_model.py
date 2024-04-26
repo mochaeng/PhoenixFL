@@ -17,7 +17,7 @@ from ...neural_helper.mlp import (
     FnidsMLP,
     collect_metrics,
     DEVICE,
-    load_data,
+    get_train_and_test_loaders,
 )
 
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         # df = df.drop_duplicates()
 
         data, _ = get_standardized_data(df, scaler)
-        train_loader, eval_loader, test_loader = load_data(data)
+        train_loader, eval_loader, test_loader = get_train_and_test_loaders(data)
 
         model = PopoolaMLP().to(device=DEVICE)
 

@@ -5,24 +5,70 @@ import numpy as np
 from collections import OrderedDict
 import os
 
-from ..pre_process import read_dataset, COLUMN_TO_REMOVE, get_standardized_data
+from ..pre_process import (
+    COLUMN_TO_REMOVE,
+    get_standardized_data_from_train_test_dataframes,
+    CLIENTS_PATH,
+    get_train_test_dataframes_and_drop_column,
+)
 
-NUM_CLIENTS = 3
+NUM_CLIENTS = 4
 NUM_ROUNDS = 3
+
 PATH_TO_METRICS_FOLDER = "./prototype_1/federated/metrics"
-TEMP_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "temp_metrics.txt")
+# TEMP_METRICS_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "temp_metrics.txt")
 METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "metrics.json")
-
-PATH_TON_DATASET = "datasets/pre-processed/NF-ToN-IoT-v2.parquet"
-PATH_UNSW_DATASET = "datasets/pre-processed/NF-UNSW-NB15-v2.parquet"
-PATH_BOT_DATASET = "datasets/pre-processed/NF-BoT-IoT-v2.parquet"
+WEIGHTED_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "weighted.json")
 
 
-DATASETS: list[tuple[str, str]] = [
-    ("client-1: ToN", PATH_TON_DATASET),
-    ("client-2: BoT", PATH_BOT_DATASET),
-    ("client-3: UNSW", PATH_UNSW_DATASET),
-]
+class FederatedMetricsRecord:
+    def __init__(self) -> None:
+        self.__metrics = {}
+
+    def __repr__(self) -> str:
+        return str(self.__metrics)
+
+    def add(self, server_round, name, values):
+        round_key = f"round_{server_round}"
+        if round_key not in self.__metrics:
+            self.__metrics[round_key] = {}
+        self.__metrics[round_key][name] = values
+
+    def add_weighted_values(self, values):
+        self.__metrics["weighted"] = values
+
+    def get(self):
+        return self.__metrics
+
+
+class AggregatedFederatedMetricsRecorder:
+    def __init__(
+        self,
+        num_models: int,
+        num_rounds: int,
+        client_names: List[str],
+        metrics_names: List[str],
+    ) -> None:
+        self.client_names = client_names
+        self.metrics_names = metrics_names
+        self.models = list(range(1, num_models + 1))
+        self.rounds = list(range(1, num_rounds + 1))
+        self._metrics = {
+            f"model_{num_model}": {
+                f"round_{num_round}": {
+                    client_name: {metric_name: [] for metric_name in self.metrics_names}
+                    for client_name in self.client_names
+                }
+                for num_round in self.rounds
+            }
+            for num_model in self.models
+        }
+
+    def add(self, num_model, num_round, name, values):
+        self._metrics[num_model][num_round][name] = values
+
+    def get(self):
+        return self._metrics
 
 
 def get_parameters(net) -> List[np.ndarray]:
@@ -40,9 +86,13 @@ def get_all_federated_loaders(
 ) -> dict[int, Tuple[Tuple, Tuple[DataLoader, DataLoader]]]:
     def _get_all_federated_client_data():
         all_data: Dict[int, Tuple[str, Dict]] = {}
-        for idx, (dataset_name, path) in enumerate(DATASETS):
-            df = read_dataset(path, COLUMN_TO_REMOVE)
-            data_std, _ = get_standardized_data(df)
+        for idx, (dataset_name, path) in enumerate(CLIENTS_PATH):
+            train_df, test_df = get_train_test_dataframes_and_drop_column(
+                path, COLUMN_TO_REMOVE
+            )
+            data_std, _ = get_standardized_data_from_train_test_dataframes(
+                train_df, test_df
+            )
             all_data[idx] = (dataset_name, data_std)
         return all_data
 
@@ -52,19 +102,16 @@ def get_all_federated_loaders(
     for cid, data in all_data.items():
         name, data_std = data
 
-        x_train_tensor = torch.tensor(data_std["X_train"], dtype=torch.float32)
+        x_train_tensor = torch.tensor(data_std["x_train"], dtype=torch.float32)
         y_train_tensor = torch.tensor(data_std["y_train"], dtype=torch.float32).view(
             -1, 1
         )
-        x_eval_tensor = torch.tensor(data_std["X_eval"], dtype=torch.float32)
-        y_eval_tensor = torch.tensor(data_std["y_eval"], dtype=torch.float32).view(
+        x_eval_tensor = torch.tensor(data_std["x_test"], dtype=torch.float32)
+        y_eval_tensor = torch.tensor(data_std["y_test"], dtype=torch.float32).view(
             -1, 1
         )
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
         eval_dataset = TensorDataset(x_eval_tensor, y_eval_tensor)
-
-        if cid == 0:
-            print(len(train_dataset))
 
         train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
         eval_loader = DataLoader(eval_dataset, batch_size, shuffle=False)

@@ -3,24 +3,35 @@
         "accuracy":0.0000000027,
         "precision":0.0000000405,
         "recall":0.0000000302,
-        "f1_score":0.0000000358
+        "f1_score":0.0000000358,
+        "final_loss":0.0
     },
     "precision":{
         "accuracy":0.0000000405,
         "precision":0.0000006142,
         "recall":0.0000004584,
-        "f1_score":0.0000005431
+        "f1_score":0.0000005431,
+        "final_loss":0.0000000002
     },
     "recall":{
         "accuracy":0.0000000302,
         "precision":0.0000004584,
         "recall":0.0000003421,
-        "f1_score":0.0000004053
+        "f1_score":0.0000004053,
+        "final_loss":0.0000000002
     },
     "f1_score":{
         "accuracy":0.0000000358,
         "precision":0.0000005431,
         "recall":0.0000004053,
-        "f1_score":0.0000004802
+        "f1_score":0.0000004802,
+        "final_loss":0.0000000002
+    },
+    "final_loss":{
+        "accuracy":0.0,
+        "precision":0.0000000002,
+        "recall":0.0000000002,
+        "f1_score":0.0000000002,
+        "final_loss":0.0
     }
 }
