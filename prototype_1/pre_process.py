@@ -85,29 +85,51 @@ def get_train_test_dataframes_and_drop_column(
     return train_df, test_df
 
 
-def get_data(df: pd.DataFrame) -> Dict:
-    x = df.iloc[:, :-1].values
-    y = df.iloc[:, -1:].values
+def get_train_and_test_dfs(path: Dict):
+    train_df = (
+        pd.read_parquet(path["TRAIN"], engine="pyarrow")
+        .drop(columns=[COLUMN_TO_REMOVE])
+        .drop_duplicates()
+    )
+    test_df = (
+        pd.read_parquet(path["TEST"], engine="pyarrow")
+        .drop(columns=[COLUMN_TO_REMOVE])
+        .drop_duplicates()
+    )
+    return train_df, test_df
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.4, random_state=69, stratify=y
+
+def get_test_df(path: Dict):
+    return (
+        pd.read_parquet(path["TEST"], engine="pyarrow")
+        .drop(columns=[COLUMN_TO_REMOVE])
+        .drop_duplicates()
     )
 
-    # X_train, X_temp, y_train, y_temp = train_test_split(
-    #     X, y, test_size=0.4, random_state=69, stratify=y
-    # )
-    # X_eval, X_test, y_eval, y_test = train_test_split(
-    #     X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp
-    # )
 
-    data = {
-        "X_train": x_train,
-        "y_train": y_train,
-        "X_test": x_test,
-        "y_test": y_test,
-    }
+# def get_data(df: pd.DataFrame) -> Dict:
+#     x = df.iloc[:, :-1].values
+#     y = df.iloc[:, -1:].values
 
-    return data
+#     x_train, x_test, y_train, y_test = train_test_split(
+#         x, y, test_size=0.4, random_state=69, stratify=y
+#     )
+
+#     # X_train, X_temp, y_train, y_temp = train_test_split(
+#     #     X, y, test_size=0.4, random_state=69, stratify=y
+#     # )
+#     # X_eval, X_test, y_eval, y_test = train_test_split(
+#     #     X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp
+#     # )
+
+#     data = {
+#         "X_train": x_train,
+#         "y_train": y_train,
+#         "X_test": x_test,
+#         "y_test": y_test,
+#     }
+
+#     return data
 
 
 def get_x_y_data(df: pd.DataFrame) -> Dict[str, np.ndarray]:
@@ -119,19 +141,19 @@ def get_x_y_data(df: pd.DataFrame) -> Dict[str, np.ndarray]:
     }
 
 
-def get_standardized_data(df: pd.DataFrame, scaler=None, path_to_save_scaler=None):
-    data = get_data(df)
+# def get_standardized_data(df: pd.DataFrame, scaler=None, path_to_save_scaler=None):
+#     data = get_data(df)
 
-    if scaler is None:
-        # scaler = StandardScaler()
-        scaler = MinMaxScaler()
-        scaler.fit(data["X_train"])
-        if path_to_save_scaler is not None:
-            joblib.dump(scaler, PATH_SCALER)
+#     if scaler is None:
+#         # scaler = StandardScaler()
+#         scaler = MinMaxScaler()
+#         scaler.fit(data["X_train"])
+#         if path_to_save_scaler is not None:
+#             joblib.dump(scaler, PATH_SCALER)
 
-    data["X_train"] = scaler.transform(data["X_train"])
-    data["X_test"] = scaler.transform(data["X_test"])
-    return data, scaler
+#     data["X_train"] = scaler.transform(data["X_train"])
+#     data["X_test"] = scaler.transform(data["X_test"])
+#     return data, scaler
 
 
 def get_standarlize_client_data_from_scaler(
