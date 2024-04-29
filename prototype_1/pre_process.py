@@ -156,10 +156,11 @@ def get_x_y_data(df: pd.DataFrame) -> Dict[str, np.ndarray]:
 #     return data, scaler
 
 
-def get_standarlize_client_data_from_scaler(
-    df: pd.DataFrame, scaler
-) -> Dict[str, np.ndarray]:
+def get_standarlize_client_data(df: pd.DataFrame, scaler=None) -> Dict[str, np.ndarray]:
     client_data = get_x_y_data(df)
+    if scaler is None:
+        scaler = MinMaxScaler()
+        scaler.fit(client_data["x"])
     client_data["x"] = scaler.transform(client_data["x"])
     return client_data
 

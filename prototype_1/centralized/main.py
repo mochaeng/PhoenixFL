@@ -4,7 +4,7 @@ import argparse
 
 from ..pre_process import (
     COLUMN_TO_REMOVE,
-    get_standarlize_client_data_from_scaler,
+    get_standarlize_client_data,
     CLIENTS_PATH,
 )
 from ..neural_helper.mlp import (
@@ -60,9 +60,7 @@ if __name__ == "__main__":
             client_df = client_df.drop(columns=[COLUMN_TO_REMOVE])
             client_df = client_df.drop_duplicates()
 
-            client_data = get_standarlize_client_data_from_scaler(
-                client_df, server_data["scaler"]
-            )
+            client_data = get_standarlize_client_data(client_df, server_data["scaler"])
 
             test_loader = get_test_loader(
                 {"x_test": client_data["x"], "y_test": client_data["y"]}, batch_size

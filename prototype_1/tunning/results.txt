@@ -1,0 +1,21 @@
+(50821, 42)
+Best: 0.9698943059355347 using {'batch_size': 512, 'lr': 0.02, 'optimizer': <class 'torch.optim.adam.Adam'>}
+
+0.8884502636834612 (0.1278073724377172) with: {'batch_size': 64, 'lr': 0.1, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.8996922502440545 (0.12992781225477676) with: {'batch_size': 64, 'lr': 0.1, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.9527949943600795 (0.009478812232365484) with: {'batch_size': 64, 'lr': 0.02, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9696384643542896 (0.0025735759500922824) with: {'batch_size': 64, 'lr': 0.02, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.7255660468851901 (0.043667988784485016) with: {'batch_size': 64, 'lr': 0.0001, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9641092439138319 (0.0028977969132720867) with: {'batch_size': 64, 'lr': 0.0001, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.7701531925124467 (0.060134570720844) with: {'batch_size': 128, 'lr': 0.1, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9651914756381956 (0.0042288587586510355) with: {'batch_size': 128, 'lr': 0.1, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.7349151340543372 (0.1277859550450419) with: {'batch_size': 128, 'lr': 0.02, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.968674311870663 (0.004753363725944082) with: {'batch_size': 128, 'lr': 0.02, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.6815891663971081 (0.04439161787887957) with: {'batch_size': 128, 'lr': 0.0001, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9606068116920865 (0.0022931213594627356) with: {'batch_size': 128, 'lr': 0.0001, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.8816038512903871 (0.027645950305483974) with: {'batch_size': 512, 'lr': 0.1, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9656243644563638 (0.0026450269703913233) with: {'batch_size': 512, 'lr': 0.1, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.8480152300113843 (0.031941034227861875) with: {'batch_size': 512, 'lr': 0.02, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9698943059355347 (0.0010420231700012618) with: {'batch_size': 512, 'lr': 0.02, 'optimizer': <class 'torch.optim.adam.Adam'>}
+0.6425887593007389 (0.003459016424780852) with: {'batch_size': 512, 'lr': 0.0001, 'optimizer': <class 'torch.optim.sgd.SGD'>}
+0.9474231845157034 (0.00525997932774796) with: {'batch_size': 512, 'lr': 0.0001, 'optimizer': <class 'torch.optim.adam.Adam'>}

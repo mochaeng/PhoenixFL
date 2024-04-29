@@ -7,7 +7,7 @@ from ..pre_process import (
     get_train_and_test_dfs,
     get_standardized_data_from_train_test_dataframes,
     get_test_df,
-    get_standarlize_client_data_from_scaler,
+    get_standarlize_client_data,
 )
 from ..neural_helper.mlp import (
     get_train_and_test_loaders,
@@ -69,9 +69,7 @@ if __name__ == "__main__":
                 continue
             print(f"Evaluating local DNN at {eval_client_name}")
             eval_test_df = get_test_df(eval_dataset_path)
-            eval_data = get_standarlize_client_data_from_scaler(
-                eval_test_df, local_scaler
-            )
+            eval_data = get_standarlize_client_data(eval_test_df, local_scaler)
             eval_test_loader = get_test_loader(
                 {"x_test": eval_data["x"], "y_test": eval_data["y"]}, batch_size
             )

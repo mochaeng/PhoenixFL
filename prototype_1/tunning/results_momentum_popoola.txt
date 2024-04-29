@@ -1,0 +1,30 @@
+fnids_(25411, 42)
+Best: 0.9557277412194873 using {'batch_size': 64, 'lr': 0.02, 'optimizer__momentum': 0.9}
+
+0.8421568743586878 (0.07024851136750769) with: {'batch_size': 64, 'lr': 0.1, 'optimizer__momentum': 0.0}
+0.9303047491143284 (0.04250935982222851) with: {'batch_size': 64, 'lr': 0.1, 'optimizer__momentum': 0.6}
+0.9516742731808996 (0.005449876497158351) with: {'batch_size': 64, 'lr': 0.1, 'optimizer__momentum': 0.9}
+0.8998485742731266 (0.04156460089960203) with: {'batch_size': 64, 'lr': 0.02, 'optimizer__momentum': 0.0}
+0.9475813731335704 (0.0173449320679552) with: {'batch_size': 64, 'lr': 0.02, 'optimizer__momentum': 0.6}
+0.9557277412194873 (0.003946273127751793) with: {'batch_size': 64, 'lr': 0.02, 'optimizer__momentum': 0.9}
+0.68840443444024 (0.05079834389342199) with: {'batch_size': 64, 'lr': 0.0001, 'optimizer__momentum': 0.0}
+0.7549091921795944 (0.008629052469812996) with: {'batch_size': 64, 'lr': 0.0001, 'optimizer__momentum': 0.6}
+0.8397541155271917 (0.005204493455801605) with: {'batch_size': 64, 'lr': 0.0001, 'optimizer__momentum': 0.9}
+0.8550250570943433 (0.05249476720825065) with: {'batch_size': 128, 'lr': 0.1, 'optimizer__momentum': 0.0}
+0.9000871096662774 (0.058782921327021564) with: {'batch_size': 128, 'lr': 0.1, 'optimizer__momentum': 0.6}
+0.9254643519698158 (0.03257498011653539) with: {'batch_size': 128, 'lr': 0.1, 'optimizer__momentum': 0.9}
+0.8311747231300824 (0.04340393791553018) with: {'batch_size': 128, 'lr': 0.02, 'optimizer__momentum': 0.0}
+0.9167668493639198 (0.049015612995777384) with: {'batch_size': 128, 'lr': 0.02, 'optimizer__momentum': 0.6}
+0.9455350663441804 (0.016687165920682093) with: {'batch_size': 128, 'lr': 0.02, 'optimizer__momentum': 0.9}
+0.6426745927094684 (0.002050456309468789) with: {'batch_size': 128, 'lr': 0.0001, 'optimizer__momentum': 0.0}
+0.704064353843475 (0.040639383823381045) with: {'batch_size': 128, 'lr': 0.0001, 'optimizer__momentum': 0.6}
+0.750147597113419 (0.015601809187033083) with: {'batch_size': 128, 'lr': 0.0001, 'optimizer__momentum': 0.9}
+0.8970128917815503 (0.005727785716571242) with: {'batch_size': 512, 'lr': 0.1, 'optimizer__momentum': 0.0}
+0.9068116259467109 (0.010376290000172003) with: {'batch_size': 512, 'lr': 0.1, 'optimizer__momentum': 0.6}
+0.9085436767371201 (0.01571020661459468) with: {'batch_size': 512, 'lr': 0.1, 'optimizer__momentum': 0.9}
+0.8717091015626239 (0.007309796669577294) with: {'batch_size': 512, 'lr': 0.02, 'optimizer__momentum': 0.0}
+0.8985472560455122 (0.01997780396466301) with: {'batch_size': 512, 'lr': 0.02, 'optimizer__momentum': 0.6}
+0.9071660417393967 (0.028385291576057327) with: {'batch_size': 512, 'lr': 0.02, 'optimizer__momentum': 0.9}
+0.6465308155380232 (0.007327971928297326) with: {'batch_size': 512, 'lr': 0.0001, 'optimizer__momentum': 0.0}
+0.6431860164945494 (0.0005674920165080937) with: {'batch_size': 512, 'lr': 0.0001, 'optimizer__momentum': 0.6}
+0.6468459928817984 (0.004747016721506208) with: {'batch_size': 512, 'lr': 0.0001, 'optimizer__momentum': 0.9}
