@@ -1,4 +1,5 @@
 import torch
+import torch.amp
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,11 +10,10 @@ from torcheval.metrics import (
     BinaryF1Score,
 )
 import copy
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Tuple, Optional
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
-# OPTIMIZER = torch.optim.SGD
 
 
 class PopoolaMLP(nn.Module):
@@ -92,7 +92,8 @@ def train(
     trainloader,
     train_config={"epochs": 10, "lr": 1e-4, "momentum": 0.9, "weight_decay": 1e-5},
     is_verbose=True,
-):
+    is_epochs_logs=False,
+) -> Optional[Dict]:
     criterion = CRITERION()
 
     if train_config.get("optimizer") == "adam":
@@ -112,6 +113,9 @@ def train(
     if "proximal_mu" in train_config:
         global_params = copy.deepcopy(net).parameters()
 
+    epochs_logs = {}
+    scaler = torch.GradScaler()
+
     net.train()
     for epoch in range(train_config["epochs"]):
         correct, total, epoch_loss = 0, 0, 0.0
@@ -119,21 +123,24 @@ def train(
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
 
             optimizer.zero_grad()
-            outputs = net(inputs)
 
-            if "proximal_mu" in train_config:
-                proximal_term = calculate_proximal_term(net, global_params)
-                loss = (
-                    criterion(outputs, labels)
-                    + (train_config["proximal_mu"] / 2) * proximal_term
-                )
-            else:
-                loss = criterion(outputs, labels)
+            with torch.autocast(device_type=DEVICE.type, dtype=torch.float16):
+                outputs = net(inputs)
 
-            loss.backward()
-            optimizer.step()
+                if "proximal_mu" in train_config:
+                    proximal_term = calculate_proximal_term(net, global_params)
+                    loss = (
+                        criterion(outputs, labels)
+                        + (train_config["proximal_mu"] / 2) * proximal_term
+                    )
+                else:
+                    loss = criterion(outputs, labels)
 
-            epoch_loss += loss
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+
+            epoch_loss += loss.item() * inputs.size(0)
             total += labels.size(0)
             round_outputs = torch.round(torch.sigmoid(outputs))
             correct += (round_outputs == labels).sum().item()
@@ -141,29 +148,39 @@ def train(
         epoch_loss /= len(trainloader.dataset)
         epoch_acc = correct / total
 
+        if is_epochs_logs:
+            epochs_logs[f"epoch_{epoch}"] = {
+                "loss": float(epoch_loss),
+                "acc": float(epoch_acc),
+            }
+
         if is_verbose:
             print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
+    if is_epochs_logs:
+        return epochs_logs
 
-def collect_metrics(net: nn.Module, testloader) -> Dict[str, float]:
+
+def evaluate_model(net: nn.Module, testloader) -> Dict[str, float]:
     criterion = CRITERION()
-    loss = 0
-    metrics: Dict[str, float] = {}
 
     accuracy = BinaryAccuracy().to(DEVICE)
     precision = BinaryPrecision().to(DEVICE)
     recall = BinaryRecall().to(DEVICE)
     f1_score = BinaryF1Score().to(DEVICE)
 
-    net.eval()
+    val_loss = 0
+    metrics: Dict[str, float] = {}
 
+    net.eval()
     with torch.no_grad():
         for inputs, labels in testloader:
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
 
             outputs = net(inputs)
-            loss += criterion(outputs, labels).item()
             predicted = torch.round(torch.sigmoid(outputs.data))
+
+            val_loss += criterion(outputs, labels).item() * labels.size(0)
 
             labels = labels.bool()
             predicted = predicted.view(-1)
@@ -174,14 +191,14 @@ def collect_metrics(net: nn.Module, testloader) -> Dict[str, float]:
             recall.update(predicted, labels)
             f1_score.update(predicted, labels)
 
-    loss /= len(testloader.dataset)
+    val_loss /= len(testloader.dataset)
 
     metrics = {
         "accuracy": accuracy.compute().item(),
         "precision": precision.compute().item(),
         "recall": recall.compute().item(),
         "f1_score": f1_score.compute().item(),
-        "final_loss": loss,
+        "final_loss": val_loss,
     }
 
     return metrics
