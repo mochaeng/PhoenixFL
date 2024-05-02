@@ -1,21 +1,9 @@
 import argparse
 import json
 
-from ..pre_process import (
-    CLIENTS_PATH,
-    get_train_and_test_dfs,
-    get_standardized_data_from_train_test_dataframes,
-    get_test_df,
-    get_standarlize_client_data,
-)
-from ..neural_helper.mlp import (
-    get_train_and_test_loaders,
-    train,
-    evaluate_model,
-    MLP,
-    DEVICE,
-    get_test_loader,
-)
+from ..pre_process import CLIENTS_PATH, BATCH_SIZE
+from ..neural_helper.mlp import train, evaluate_model, MLP, DEVICE, TRAIN_CONFIG
+from .local_helpers import get_local_loaders, get_eval_test_loader
 
 PATH_TO_SAVE = "./prototype_1/local/metrics"
 
@@ -32,35 +20,23 @@ if __name__ == "__main__":
     args = parser.parse_args()
     num_models = args.num_models
 
-    batch_size = 512
-    train_config = {
-        "epochs": 10,
-        "lr": 0.0001,
-        "momentum": 0.9,
-        "weight_decay": 10e-4,
-        "optimizer": "adam",
-    }
-
     global_metrics = {}
     local_train_logs_metrics = {}
 
-    for client_name, dataset_path in CLIENTS_PATH:
+    for client_name, dataset_paths in CLIENTS_PATH:
         print(f"\nTraining local DNN on {client_name} data")
 
         dataset_name = client_name.split(" ")[1]
         local_model_key = f"model_{dataset_name}"
         global_metrics[local_model_key] = {}
 
-        train_df, test_df = get_train_and_test_dfs(dataset_path)
-        local_data, local_scaler = get_standardized_data_from_train_test_dataframes(
-            train_df, test_df
-        )
-        local_train_loader, local_test_loader = get_train_and_test_loaders(
-            local_data, batch_size
+        (local_train_loader, local_test_loader), local_scaler = get_local_loaders(
+            dataset_paths, BATCH_SIZE
         )
 
         model = MLP().to(DEVICE)
-        logs = train(model, local_train_loader, train_config, is_epochs_logs=True)
+        logs = train(model, local_train_loader, TRAIN_CONFIG, is_epochs_logs=True)
+
         local_train_logs_metrics[client_name] = logs
         local_metrics = evaluate_model(model, local_test_loader)
         del local_metrics["final_loss"]
@@ -72,10 +48,8 @@ if __name__ == "__main__":
 
             print(f"Evaluating local DNN at {eval_client_name}")
 
-            eval_test_df = get_test_df(eval_dataset_path)
-            eval_data = get_standarlize_client_data(eval_test_df, local_scaler)
-            eval_test_loader = get_test_loader(
-                {"x_test": eval_data["x"], "y_test": eval_data["y"]}, batch_size
+            eval_test_loader = get_eval_test_loader(
+                eval_dataset_path["TEST"], local_scaler, BATCH_SIZE
             )
 
             eval_metrics = evaluate_model(model, eval_test_loader)

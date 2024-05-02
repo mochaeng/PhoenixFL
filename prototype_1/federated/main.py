@@ -7,7 +7,8 @@ import argparse
 import uuid
 import datetime
 
-from ..neural_helper.mlp import MLP, train, collect_metrics, DEVICE
+from ..pre_process import BATCH_SIZE
+from ..neural_helper.mlp import MLP, train, evaluate_model, DEVICE, TRAIN_CONFIG
 from .federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
@@ -32,31 +33,32 @@ class FlowerNumPyClient(fl.client.NumPyClient):
         return get_parameters(self.net)
 
     def fit(self, parameters, config):
-        possible_hyperparameters = [
-            "proximal_mu",
-            "momentum",
-            "weight_decay",
-            "optimizer",
-        ]
-        train_config = {
-            "epochs": config["local_epochs"],
-            "lr": config["lr"],
-            **{key: config[key] for key in possible_hyperparameters if key in config},
-        }
+        server_round = config["server_round"]
+        del config["server_round"]
 
-        print(
-            f"\n[Client {self.cid}], round {config['server_round']} fit, config: {config}"
-        )
+        # possible_hyperparameters = [
+        #     "proximal_mu",
+        #     "momentum",
+        #     "weight_decay",
+        #     "optimizer",
+        # ]
+        # train_config = {
+        #     "epochs": config["epochs"],
+        #     "lr": config["lr"],
+        #     **{key: config[key] for key in possible_hyperparameters if key in config},
+        # }
+
+        print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
         set_parameters(self.net, parameters)
-        train(self.net, self.train_loader, train_config=train_config)
+        train(self.net, self.train_loader, train_config=config)
         return get_parameters(self.net), len(self.train_loader), {}
 
     def evaluate(self, parameters, config):
         print(f"\n[Client {self.cid}] evaluate, config: {config}")
 
         set_parameters(self.net, parameters)
-        metrics = collect_metrics(self.net, self.eval_loader)
+        metrics = evaluate_model(self.net, self.eval_loader)
 
         print(f"{self.name}, accuracy: {float(metrics['accuracy'])})")
 
@@ -68,15 +70,13 @@ class FlowerNumPyClient(fl.client.NumPyClient):
 
 
 def fit_config(server_round: int) -> Dict[str, Scalar]:
-    config: Dict[str, Scalar] = {
-        "server_round": server_round,
-        "local_epochs": 1,
-        "lr": 0.0001,
-        "momentum": 0.9,
-        "weight_decay": 1e-5,
-        "optimizer": "sgd",
-    }
-    return config
+    merge_config = TRAIN_CONFIG.copy()
+    merge_config.update(
+        {
+            "server_round": server_round,
+        }
+    )
+    return merge_config
 
 
 def eval_config(server_round: int) -> Dict[str, Scalar]:
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     proximal_mu = args.mu
 
     metrics_record = FederatedMetricsRecord()
-    LOADERS = get_all_federated_loaders(batch_size=512)
+    LOADERS = get_all_federated_loaders(BATCH_SIZE)
     starting_params = get_parameters(MLP().to(DEVICE))
 
     if is_save_results:
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         strategy_name, **strategy_config
     ).create_strategy(on_federated_evaluation_results=federated_evaluation_results)
 
-    clients_resources = {"num_cpus": 1, "num_gpus": 1}
+    clients_resources = {"num_cpus": 2, "num_gpus": 1}
 
     history: History = fl.simulation.start_simulation(
         client_fn=client_fn,

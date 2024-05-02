@@ -1,138 +1,67 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy.sparse import spmatrix
 import joblib
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
 PATH_SCALER = "prototype_1/centralized/models/scaler_centralized_model.pkl"
-
-__PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
-# PREPROCESSED_DATASETS_PATH = "../../datasets/pre-processed"
-
-DATASETS_PATHS = {
-    "TON": {
-        "TRAIN": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.parquet",
-        "TEST": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.parquet",
-    },
-    "BOT": {
-        "TRAIN": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.parquet",
-        "TEST": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.parquet",
-    },
-    "UNSW": {
-        "TRAIN": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_train.parquet",
-        "TEST": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_test.parquet",
-    },
-    "CSE": {
-        "TRAIN": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_train.parquet",
-        "TEST": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_test.parquet",
-    },
-    "CENTRALIZED": {
-        "TRAIN": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
-        "TEST": f"{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
-    },
-}
-
-# For pycharm:
-# DATASETS_PATHS = {
-#     "TON": {
-#         "TRAIN": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.parquet",
-#         "TEST": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.parquet",
-#     },
-#     "BOT": {
-#         "TRAIN": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.parquet",
-#         "TEST": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.parquet",
-#     },
-#     "UNSW": {
-#         "TRAIN": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_train.parquet",
-#         "TEST": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_test.parquet",
-#     },
-#     "CSE": {
-#         "TRAIN": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_train.parquet",
-#         "TEST": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_test.parquet",
-#     },
-#     "CENTRALIZED": {
-#         "TRAIN": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
-#         "TEST": f"../../{__PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
-#     },
-# }
-
-COLUMN_TO_REMOVE = "Attack"
-
+PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
+COLUMNS_TO_REMOVE = ["Attack"]
 CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
+DATASETS_PATHS = {
+    "TON": {
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.parquet",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.parquet",
+    },
+    "BOT": {
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.parquet",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.parquet",
+    },
+    "UNSW": {
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_train.parquet",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_test.parquet",
+    },
+    "CSE": {
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_train.parquet",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_test.parquet",
+    },
+    "CENTRALIZED": {
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
+    },
+}
 CLIENTS_PATH: List[Tuple[str, Dict]] = [
-    ("client-1: ToN", DATASETS_PATHS["TON"]),
-    ("client-2: BoT", DATASETS_PATHS["BOT"]),
-    ("client-3: UNSW", DATASETS_PATHS["UNSW"]),
-    ("client-4: CSE", DATASETS_PATHS["CSE"]),
+    (client_name, DATASETS_PATHS[client_name.split(" ")[1].upper()])
+    for client_name in CLIENTS_NAMES
 ]
 
+SCALER = MinMaxScaler
+ScalerType = Union[MinMaxScaler, StandardScaler]
+DataType = Union[np.ndarray, spmatrix]
 
-def read_dataset(path: str) -> pd.DataFrame:
-    df = pd.read_parquet(path)
+BATCH_SIZE = 512
+
+
+def get_df(path: str) -> pd.DataFrame:
+    df = (
+        pd.read_parquet(path, engine="pyarrow")
+        .drop(columns=COLUMNS_TO_REMOVE)
+        .drop_duplicates()
+    )
     return df
 
 
-def get_train_test_dataframes_and_drop_column(
-    path: Dict, target_column: str
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    train_path, test_path = path["TRAIN"], path["TEST"]
-    train_df = pd.read_parquet(train_path).drop(columns=[target_column])
-    test_df = pd.read_parquet(test_path).drop(columns=[target_column])
+def get_train_and_test_dfs(paths: Dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    train_df = get_df(paths["TRAIN"])
+    test_df = get_df(paths["TEST"])
     return train_df, test_df
 
 
-def get_train_and_test_dfs(path: Dict):
-    train_df = (
-        pd.read_parquet(path["TRAIN"], engine="pyarrow")
-        .drop(columns=[COLUMN_TO_REMOVE])
-        .drop_duplicates()
-    )
-    test_df = (
-        pd.read_parquet(path["TEST"], engine="pyarrow")
-        .drop(columns=[COLUMN_TO_REMOVE])
-        .drop_duplicates()
-    )
-    return train_df, test_df
-
-
-def get_test_df(path: Dict):
-    return (
-        pd.read_parquet(path["TEST"], engine="pyarrow")
-        .drop(columns=[COLUMN_TO_REMOVE])
-        .drop_duplicates()
-    )
-
-
-# def get_data(df: pd.DataFrame) -> Dict:
-#     x = df.iloc[:, :-1].values
-#     y = df.iloc[:, -1:].values
-
-#     x_train, x_test, y_train, y_test = train_test_split(
-#         x, y, test_size=0.4, random_state=69, stratify=y
-#     )
-
-#     # X_train, X_temp, y_train, y_temp = train_test_split(
-#     #     X, y, test_size=0.4, random_state=69, stratify=y
-#     # )
-#     # X_eval, X_test, y_eval, y_test = train_test_split(
-#     #     X_temp, y_temp, test_size=0.5, random_state=69, stratify=y_temp
-#     # )
-
-#     data = {
-#         "X_train": x_train,
-#         "y_train": y_train,
-#         "X_test": x_test,
-#         "y_test": y_test,
-#     }
-
-#     return data
-
-
-def get_x_y_data(df: pd.DataFrame) -> Dict[str, np.ndarray]:
+def get_x_y_data(df: pd.DataFrame) -> Dict[str, DataType]:
     x = df.iloc[:, :-1].values
     y = df.iloc[:, -1:].values
     return {
@@ -141,47 +70,40 @@ def get_x_y_data(df: pd.DataFrame) -> Dict[str, np.ndarray]:
     }
 
 
-# def get_standardized_data(df: pd.DataFrame, scaler=None, path_to_save_scaler=None):
-#     data = get_data(df)
-
-#     if scaler is None:
-#         # scaler = StandardScaler()
-#         scaler = MinMaxScaler()
-#         scaler.fit(data["X_train"])
-#         if path_to_save_scaler is not None:
-#             joblib.dump(scaler, PATH_SCALER)
-
-#     data["X_train"] = scaler.transform(data["X_train"])
-#     data["X_test"] = scaler.transform(data["X_test"])
-#     return data, scaler
+def get_standardized_data(df: pd.DataFrame, scaler: ScalerType) -> Dict[str, DataType]:
+    data = get_x_y_data(df)
+    data["x"] = scaler.transform(data["x"])
+    return data
 
 
-def get_standarlize_client_data(df: pd.DataFrame, scaler=None) -> Dict[str, np.ndarray]:
-    client_data = get_x_y_data(df)
-    if scaler is None:
-        scaler = MinMaxScaler()
-        scaler.fit(client_data["x"])
-    client_data["x"] = scaler.transform(client_data["x"])
-    return client_data
+def get_fit_scaler_from_data(
+    data: Dict[str, DataType], path_to_save=None
+) -> ScalerType:
+    scaler = SCALER()
+    scaler.fit(data["x"])
+    if path_to_save is not None:
+        joblib.dump(scaler, PATH_SCALER)
+    return scaler
 
 
-def get_standardized_data_from_train_test_dataframes(
-    train_df: pd.DataFrame, test_df: pd.DataFrame, scaler=None, path_to_save_scaler=None
-) -> Tuple[Dict[str, np.ndarray], MinMaxScaler]:
+def get_standardized_train_test_data(
+    train_df: pd.DataFrame, test_df: pd.DataFrame, path_to_save=None
+) -> Tuple[Tuple[Dict[str, DataType], Dict[str, DataType]], ScalerType]:
     train_data = get_x_y_data(train_df)
     test_data = get_x_y_data(test_df)
-    if scaler is None:
-        scaler = MinMaxScaler()
-        scaler.fit(train_data["x"])
-        if path_to_save_scaler is not None:
-            joblib.dump(scaler, PATH_SCALER)
+
+    scaler = get_fit_scaler_from_data(train_data, path_to_save)
 
     train_data["x"] = scaler.transform(train_data["x"])
     test_data["x"] = scaler.transform(test_data["x"])
 
-    return {
-        "x_train": train_data["x"],
-        "y_train": train_data["y"],
-        "x_test": test_data["x"],
-        "y_test": test_data["y"],
-    }, scaler
+    return (train_data, test_data), scaler
+
+
+def get_prepared_data_for_loader(train_data=None, test_data=None):
+    data = {}
+    if train_data:
+        data.update({"x_train": train_data["x"], "y_train": train_data["y"]})
+    if test_data:
+        data.update({"x_test": test_data["x"], "y_test": test_data["y"]})
+    return data

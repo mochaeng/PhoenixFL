@@ -15,6 +15,14 @@ from typing import Dict, Iterator, Tuple, Optional
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
 
+TRAIN_CONFIG = {
+    "epochs": 10,
+    "lr": 0.002,
+    "momentum": 0.9,
+    "weight_decay": 0.0002,
+    "optimizer": "sgd",
+}
+
 
 class PopoolaMLP(nn.Module):
     def __init__(self) -> None:
@@ -53,9 +61,7 @@ class FnidsMLP(nn.Module):
         return x
 
 
-def get_train_and_test_loaders(
-    data: dict, batch_size=32
-) -> Tuple[DataLoader, DataLoader]:
+def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, DataLoader]:
     x_train_tensor = torch.tensor(data["x_train"], dtype=torch.float32)
     y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
@@ -73,8 +79,11 @@ def get_train_and_test_loaders(
 def get_test_loader(data: dict, batch_size=32):
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
     y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
+
     test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
+
     test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
+
     return test_loader
 
 
@@ -89,7 +98,7 @@ def calculate_proximal_term(
 
 def train(
     net: nn.Module,
-    trainloader,
+    trainloader: DataLoader,
     train_config={"epochs": 10, "lr": 1e-4, "momentum": 0.9, "weight_decay": 1e-5},
     is_verbose=True,
     is_epochs_logs=False,
@@ -145,7 +154,7 @@ def train(
             round_outputs = torch.round(torch.sigmoid(outputs))
             correct += (round_outputs == labels).sum().item()
 
-        epoch_loss /= len(trainloader.dataset)
+        epoch_loss /= len(trainloader.dataset)  # type: ignore
         epoch_acc = correct / total
 
         if is_epochs_logs:

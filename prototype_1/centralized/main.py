@@ -1,18 +1,20 @@
-import json
-import pandas as pd
 import argparse
+import json
 
 from ..pre_process import (
-    COLUMN_TO_REMOVE,
-    get_standarlize_client_data,
     CLIENTS_PATH,
+    get_df,
+    get_standardized_data,
+    get_prepared_data_for_loader,
+    BATCH_SIZE,
 )
 from ..neural_helper.mlp import (
     DEVICE,
     train,
-    collect_metrics,
+    evaluate_model,
     MLP,
     get_test_loader,
+    TRAIN_CONFIG,
 )
 from .centralized_helpers import print_headers, get_centralized_data
 
@@ -31,47 +33,43 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     num_models = args.num_models
+    if num_models <= 0:
+        raise argparse.ArgumentTypeError("num models should be >= 1")
 
-    batch_size = 512
-    train_config = {
-        "epochs": 10,
-        "lr": 0.002,
-        "momentum": 0.9,
-        "weight_decay": 0.0002,
-    }
-
+    train_logs = {}
     global_metrics = {}
+    server_data = get_centralized_data(BATCH_SIZE)
+    num_models = num_models
 
-    server_data = get_centralized_data(batch_size)
-
-    num_models = 2
     for num_model in range(num_models):
         print_headers(f"Centralized model training {num_model+1}")
 
         model_key = f"model_{num_model+1}"
         global_metrics[model_key] = {}
+
         model = MLP().to(DEVICE)
-        train(model, server_data["train_loader"], train_config)
+        logs = train(
+            model, server_data["train_loader"], TRAIN_CONFIG, is_epochs_logs=True
+        )
+        train_logs[num_model] = logs
 
         print(f"\nEvaluating {num_model+1} model among clients")
 
         for dataset_name, dataset_path in CLIENTS_PATH:
-            client_df = pd.read_parquet(dataset_path["TEST"], engine="pyarrow")
-            client_df = client_df.drop(columns=[COLUMN_TO_REMOVE])
-            client_df = client_df.drop_duplicates()
-
-            client_data = get_standarlize_client_data(client_df, server_data["scaler"])
-
-            test_loader = get_test_loader(
-                {"x_test": client_data["x"], "y_test": client_data["y"]}, batch_size
+            client_test_df = get_df(dataset_path["TEST"])
+            client_test_data = get_standardized_data(
+                client_test_df, server_data["scaler"]
             )
-            metrics = collect_metrics(model, test_loader)
 
+            data = get_prepared_data_for_loader(test_data=client_test_data)
+            test_loader = get_test_loader(data, BATCH_SIZE)
+
+            metrics = evaluate_model(model, test_loader)
             global_metrics[model_key][dataset_name] = metrics
 
-            print(f"{dataset_name}:")
-            print(f"\t{metrics}:")
+            print(f"{dataset_name}:\t{metrics}")
 
-    json_object = json.dumps(global_metrics, indent=4)
     with open(f"{PATH_TO_SAVE}/metrics.json", "w") as f:
-        f.write(json_object)
+        json.dump(global_metrics, f, indent=4)
+    with open(f"{PATH_TO_SAVE}/train_logs.json", "w") as f:
+        json.dump(train_logs, f, indent=4)
