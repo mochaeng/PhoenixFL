@@ -111,7 +111,7 @@ def federated_evaluation_results(
         idx = cid % len(LOADERS)
         (cid_, name), _ = LOADERS[idx]
         assert cid_ == cid
-        metrics_record.add(server_round, name, results)
+        metrics_record.set_values(server_round, name, results)
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         "--save-results",
         type=bool,
         help="If you want to save the results of a federated evaluation to a file",
-        default=False,
+        default=True,
     )
     parser.add_argument(
         "--algo",
@@ -164,14 +164,14 @@ if __name__ == "__main__":
     strategy_name = args.algo
     proximal_mu = args.mu
 
-    metrics_record = FederatedMetricsRecord()
+    metrics_record = FederatedMetricsRecord(strategy_name)
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
     starting_params = get_parameters(MLP().to(DEVICE))
 
     if is_save_results:
         time_str = datetime.datetime.now().strftime("%I:%M%p_%B%d%Y")
         uuid_hex = uuid.uuid4().hex
-        TEMP_FILE_NAME = f"{PATH_TO_METRICS_FOLDER}/results_{strategy_name}_{time_str}_{uuid_hex}.json"
+        TEMP_FILE_NAME = f"{PATH_TO_METRICS_FOLDER}/TEMP_results_{strategy_name}_{time_str}_{uuid_hex}.json"
 
     strategy_config = {
         "fraction_fit": 1.0,
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         strategy_name, **strategy_config
     ).create_strategy(on_federated_evaluation_results=federated_evaluation_results)
 
-    clients_resources = {"num_cpus": 2, "num_gpus": 1}
+    clients_resources = {"num_cpus": 3, "num_gpus": 1}
 
     history: History = fl.simulation.start_simulation(
         client_fn=client_fn,
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         "metrics_distributed": history.metrics_distributed,
         "losses_distributed": history.losses_distributed,
     }
-    metrics_record.add_weighted_values(weighted_metrics)
+    metrics_record.set_weighted_values(weighted_metrics)
 
     if is_save_results:
         with open(TEMP_FILE_NAME, "w+") as f:

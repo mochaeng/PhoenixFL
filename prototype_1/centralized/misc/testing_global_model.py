@@ -5,7 +5,7 @@ import joblib
 from ..utils import get_standardized_data
 from ...pre_process import (
     PATH_CENTRALIZED_MODEL,
-    COLUMN_TO_REMOVE,
+    COLUMNS_TO_REMOVE,
     PATH_BOT_DATASET,
     PATH_TON_DATASET,
     PATH_UNSW_DATASET,
@@ -15,7 +15,7 @@ from ...pre_process import (
 from ...neural_helper.mlp import (
     PopoolaMLP,
     FnidsMLP,
-    collect_metrics,
+    evaluate_model,
     DEVICE,
     get_train_and_test_loaders,
 )
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         print("\nEvaluating centralized trained dataset")
         print(f"Current: {dataset_name}")
 
-        df = read_dataset(dataset_path, COLUMN_TO_REMOVE)
+        df = read_dataset(dataset_path, COLUMNS_TO_REMOVE)
         # df = pd.read_parquet(dataset_path)
         # df = df.drop(columns=[TARGET_NAME])
         # df = df.drop_duplicates()
@@ -47,6 +47,6 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(PATH_CENTRALIZED_MODEL))
         model.eval()
 
-        collect_metrics(model, eval_loader)
-        print(f"\nEvaluation: {collect_metrics(model, eval_loader)}")
-        print(f"Testing: {collect_metrics(model, test_loader)}")
+        evaluate_model(model, eval_loader)
+        print(f"\nEvaluation: {evaluate_model(model, eval_loader)}")
+        print(f"Testing: {evaluate_model(model, test_loader)}")

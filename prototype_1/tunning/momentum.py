@@ -6,15 +6,15 @@ from sklearn.model_selection import GridSearchCV
 
 from .helpers import TON_DATASET_PATH, FnidsMLP, PopoolaMLP, PATH_TO_SAVE_RESULTS
 from ..pre_process import (
-    COLUMN_TO_REMOVE,
-    get_standarlize_client_data,
+    COLUMNS_TO_REMOVE,
+    get_standardized_data,
 )
 
 
 if __name__ == "__main__":
     train_df = (
         pd.read_parquet(TON_DATASET_PATH, engine="pyarrow")
-        .drop(columns=[COLUMN_TO_REMOVE])
+        .drop(columns=[COLUMNS_TO_REMOVE])
         .sample(frac=0.1)
         .drop_duplicates()
     )
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     MLP = PopoolaMLP
     result = f"fnids_{str(train_df.shape)}\n"
 
-    data = get_standarlize_client_data(train_df)
+    data = get_standardized_data(train_df)
     X = torch.tensor(data["x"], dtype=torch.float32)
     y = torch.tensor(data["y"], dtype=torch.float32).view(-1, 1).squeeze()
 

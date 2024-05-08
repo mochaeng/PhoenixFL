@@ -3,6 +3,7 @@ import pandas as pd
 
 # ---------------------------------------------------------
 # ONLY RUN THIS CODE IF YOU HAVE MORE THAN 16GB RAM MINIMUM
+#                 (YOU CAN USE KAGGLE)
 # ---------------------------------------------------------
 
 kaggle = {

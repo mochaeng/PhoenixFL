@@ -8,7 +8,13 @@ from typing import Dict, List, Tuple, Union
 PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
 PATH_SCALER = "prototype_1/centralized/models/scaler_centralized_model.pkl"
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
-COLUMNS_TO_REMOVE = ["Attack"]
+COLUMNS_TO_REMOVE = [
+    "IPV4_SRC_ADDR",
+    "IPV4_DST_ADDR",
+    "L4_SRC_PORT",
+    "L4_DST_PORT",
+    "Attack",
+]
 CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
@@ -43,7 +49,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 512
+BATCH_SIZE = 32
 
 
 def get_df(path: str) -> pd.DataFrame:

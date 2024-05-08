@@ -22,53 +22,54 @@ WEIGHTED_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "weighted.json
 
 
 class FederatedMetricsRecord:
-    def __init__(self) -> None:
-        self.__metrics = {}
+    def __init__(self, strategy_name) -> None:
+        self.strategy_name = strategy_name
+        self.__metrics = {"strategy": strategy_name}
 
     def __repr__(self) -> str:
         return str(self.__metrics)
 
-    def add(self, server_round, name, values):
+    def set_values(self, server_round, name, values):
         round_key = f"round_{server_round}"
         if round_key not in self.__metrics:
             self.__metrics[round_key] = {}
         self.__metrics[round_key][name] = values
 
-    def add_weighted_values(self, values):
+    def set_weighted_values(self, values):
         self.__metrics["weighted"] = values
 
     def get(self):
         return self.__metrics
 
 
-class AggregatedFederatedMetricsRecorder:
-    def __init__(
-        self,
-        num_models: int,
-        num_rounds: int,
-        client_names: List[str],
-        metrics_names: List[str],
-    ) -> None:
-        self.client_names = client_names
-        self.metrics_names = metrics_names
-        self.models = list(range(1, num_models + 1))
-        self.rounds = list(range(1, num_rounds + 1))
-        self._metrics = {
-            f"model_{num_model}": {
-                f"round_{num_round}": {
-                    client_name: {metric_name: [] for metric_name in self.metrics_names}
-                    for client_name in self.client_names
-                }
-                for num_round in self.rounds
-            }
-            for num_model in self.models
-        }
+# class AggregatedFederatedMetricsRecorder:
+#     def __init__(
+#         self,
+#         num_models: int,
+#         num_rounds: int,
+#         client_names: List[str],
+#         metrics_names: List[str],
+#     ) -> None:
+#         self.client_names = client_names
+#         self.metrics_names = metrics_names
+#         self.models = list(range(1, num_models + 1))
+#         self.rounds = list(range(1, num_rounds + 1))
+#         self._metrics = {
+#             f"model_{num_model}": {
+#                 f"round_{num_round}": {
+#                     client_name: {metric_name: [] for metric_name in self.metrics_names}
+#                     for client_name in self.client_names
+#                 }
+#                 for num_round in self.rounds
+#             }
+#             for num_model in self.models
+#         }
 
-    def add(self, num_model, num_round, name, values):
-        self._metrics[num_model][num_round][name] = values
+#     def add(self, num_model, num_round, name, values):
+#         self._metrics[num_model][num_round][name] = values
 
-    def get(self):
-        return self._metrics
+#     def get(self):
+#         return self._metrics
 
 
 def get_parameters(net) -> List[np.ndarray]:

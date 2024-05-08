@@ -1,6 +1,10 @@
 /datasets/NF*/
 /datasets/nf*/
 /datasets/zip-files/
+/datasets/pre-processed/train-test/
+
+# no temporary files 
+**/federated/metrics/TEMP_*
 
 /venv/
 

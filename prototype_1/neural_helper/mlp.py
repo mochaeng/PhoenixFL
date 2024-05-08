@@ -17,17 +17,17 @@ CRITERION = torch.nn.BCEWithLogitsLoss
 
 TRAIN_CONFIG = {
     "epochs": 10,
-    "lr": 0.002,
+    "lr": 0.0001,
     "momentum": 0.9,
-    "weight_decay": 0.0002,
-    "optimizer": "sgd",
+    "weight_decay": 0.0001,
+    "optimizer": "adam",
 }
 
 
 class PopoolaMLP(nn.Module):
     def __init__(self) -> None:
         super(PopoolaMLP, self).__init__()
-        self.fc1 = nn.Linear(41, 128)
+        self.fc1 = nn.Linear(39, 128)
         self.norm1 = nn.LayerNorm(128)
         self.fc2 = nn.Linear(128, 128)
         self.norm2 = nn.LayerNorm(128)
@@ -48,7 +48,7 @@ class PopoolaMLP(nn.Module):
 class FnidsMLP(nn.Module):
     def __init__(self) -> None:
         super(FnidsMLP, self).__init__()
-        self.fc1 = nn.Linear(41, 160)
+        self.fc1 = nn.Linear(39, 160)
         self.norm1 = nn.LayerNorm(160)
         self.fc2 = nn.Linear(160, 1)
 
