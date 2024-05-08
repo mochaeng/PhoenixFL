@@ -1,7 +1,0 @@
-test
-Attack
-DDoS              21999
-DoS               20008
-Reconnaissance     3145
-Benign              162
-Theft                 3
