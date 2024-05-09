@@ -1,44 +1,46 @@
 import pandas as pd
 import torch
 import torch.optim as optim
+import torch.nn as nn
 from skorch import NeuralNetBinaryClassifier
 from sklearn.model_selection import GridSearchCV
+import os
 
-from .helpers import TON_DATASET_PATH, FnidsMLP, PopoolaMLP, PATH_TO_SAVE_RESULTS
+from .helpers import (
+    CENTRALIZED_DATASET_PATH,
+    PopoolaMLP,
+    PATH_TO_SAVE_RESULTS,
+)
 from ..pre_process import (
-    COLUMNS_TO_REMOVE,
     get_standardized_data,
+    get_df,
+    get_fit_scaler_from_df,
 )
 
 
 if __name__ == "__main__":
-    train_df = (
-        pd.read_parquet(TON_DATASET_PATH, engine="pyarrow")
-        .drop(columns=[COLUMNS_TO_REMOVE])
-        .sample(frac=0.1)
-        .drop_duplicates()
-    )
     mlp_architecture = "popoola"
     MLP = PopoolaMLP
-    result = f"fnids_{str(train_df.shape)}\n"
 
-    data = get_standardized_data(train_df)
+    train_df = get_df(CENTRALIZED_DATASET_PATH).sample(frac=0.1)
+    scaler = get_fit_scaler_from_df(train_df)
+    data = get_standardized_data(train_df, scaler)
+
     X = torch.tensor(data["x"], dtype=torch.float32)
     y = torch.tensor(data["y"], dtype=torch.float32).view(-1, 1).squeeze()
 
+    result = f"fnids_{str(train_df.shape)}\n"
+
     param_grid = {
-        "batch_size": [128, 512, 1024],
-        "lr": [0.1, 0.02, 0.0001],
-        "optimizer": [optim.SGD, optim.Adam],
-        # "optimizer__momentum": [0.0, 0.6, 0.9],
-        # "weight_decay": [0.1, 0.001, 1e-4],
+        "batch_size": [256, 512, 1024],
+        "lr": [0.001, 0.0001],
+        "optimizer": [optim.AdamW, optim.Adam],
+        "optimizer__weight_decay": [0.1, 0.01, 0.001],
     }
-    model = NeuralNetBinaryClassifier(MLP, verbose=False, max_epochs=10)  # type: ignore
+    model = NeuralNetBinaryClassifier(MLP, verbose=False, max_epochs=10)
     grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=3, cv=5)  # type: ignore
 
     grid_result = grid.fit(X, y)  # type: ignore
-
-    # results
 
     print(f"Best: {grid_result.best_score_} using {grid_result.best_params_}")
     result += f"Best: {grid_result.best_score_} using {grid_result.best_params_}\n\n"
@@ -50,5 +52,9 @@ if __name__ == "__main__":
         print(f"{mean} ({stdev}) with: {param}")
         result += f"{mean} ({stdev}) with: {param}\n"
 
-    with open(f"{PATH_TO_SAVE_RESULTS}/results_{mlp_architecture}.txt", "w+") as f:
+    path = os.path.join(
+        PATH_TO_SAVE_RESULTS,
+        f"results_{mlp_architecture}.txt",
+    )
+    with open(path, "w+") as f:
         f.write(result)
