@@ -9,8 +9,8 @@ PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
 PATH_SCALER = "prototype_1/centralized/models/scaler_centralized_model.pkl"
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
 COLUMNS_TO_REMOVE = [
-    "IPV4_SRC_ADDR",
-    "IPV4_DST_ADDR",
+    # "IPV4_SRC_ADDR",
+    # "IPV4_DST_ADDR",
     "L4_SRC_PORT",
     "L4_DST_PORT",
     "Attack",
@@ -18,26 +18,27 @@ COLUMNS_TO_REMOVE = [
 CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
+file_extension = "parquet"
 DATASETS_PATHS = {
     "TON": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.parquet",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.parquet",
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.{file_extension}",
     },
     "BOT": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.parquet",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.parquet",
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.{file_extension}",
     },
     "UNSW": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_train.parquet",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_test.parquet",
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-3: UNSW/NF-UNSW-NB15-V2_test.{file_extension}",
     },
     "CSE": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_train.parquet",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_test.parquet",
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-4: CSE/NF-CSE-CIC-IDS2018-V2_test.{file_extension}",
     },
     "CENTRALIZED": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.parquet",
+        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.{file_extension}",
     },
 }
 CLIENTS_PATH: List[Tuple[str, Dict]] = [
@@ -49,7 +50,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 32
+BATCH_SIZE = 512
 
 
 def get_df(path: str) -> pd.DataFrame:
@@ -80,6 +81,13 @@ def get_standardized_data(df: pd.DataFrame, scaler: ScalerType) -> Dict[str, Dat
     data = get_x_y_data(df)
     data["x"] = scaler.transform(data["x"])
     return data
+
+
+def get_fit_scaler_from_df(df: pd.DataFrame):
+    scaler = SCALER()
+    data = get_x_y_data(df)
+    scaler.fit(data["x"])
+    return scaler
 
 
 def get_fit_scaler_from_data(

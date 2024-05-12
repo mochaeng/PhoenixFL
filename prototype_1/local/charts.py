@@ -23,18 +23,31 @@ if __name__ == "__main__":
 
     print(plot_metrics)
 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7, 7))
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     axes_list = axs.flatten()
 
     x = list(map(lambda value: value + 1, x))
     for idx, client_name in enumerate(CLIENTS_NAMES):
-        axes_list[idx].plot(x, plot_metrics[client_name])
-        axes_list[idx].set(title=client_name)
-        axes_list[idx].set_yscale("logit")
-        axes_list[idx].set_ylim(
-            min(plot_metrics[client_name]), max(plot_metrics[client_name])
+        y = plot_metrics[client_name]
+        axes_list[idx].plot(
+            x,
+            y,
+            marker="o",
+            color="#FF8C00",
+            mfc="none",
+            markersize=12,
         )
+        axes_list[idx].set(title=client_name)
+        # axes_list[idx].set_yscale("logit")
+
+        # axes_list[idx].set_ylim(min(y) - 0.05, max(y) + 0.05)
+        # axes_list[idx].set_xlim(min(x) - 10, max(x) + 10)
+
+        # axes_list[idx].axis(
+        #     [min(x) - 1, max(x) + 1, round(min(y)) - 1, round(max(y)) + 1]
+        # )
         axes_list[idx].yaxis.set_major_formatter(mticker.ScalarFormatter())
+        axes_list[idx].grid()
 
     fig.tight_layout()
     fig.savefig(f"{PATH_TO_SAVE_CHARTS}/local_bce.png")

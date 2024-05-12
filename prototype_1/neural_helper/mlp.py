@@ -17,21 +17,50 @@ CRITERION = torch.nn.BCEWithLogitsLoss
 
 TRAIN_CONFIG = {
     "epochs": 10,
-    "lr": 0.0001,
-    "momentum": 0.9,
-    "weight_decay": 0.0001,
+    "lr": 0.001,
+    "momentum": 0.99,
+    "weight_decay": 0.00001,
     "optimizer": "adam",
 }
+
+
+# class Experiment(nn.Module):
+#     def __init__(self) -> None:
+#         super(Experiment, self).__init__()
+#         self.input = nn.Linear(39, 160)
+#         self.norm1 = nn.LayerNorm(160)
+#         self.fc1 = nn.Linear(160, 148)
+#         self.norm2 = nn.LayerNorm(148)
+#         self.output = nn.Linear(148, 1)
+
+#         nn.init.xavier_normal_(self.input.weight)
+#         nn.init.xavier_normal_(self.fc1.weight)
+#         nn.init.xavier_normal_(self.output.weight)
+
+#     def forward(self, x):
+#         x = self.input(x)
+#         x = self.norm1(x)
+#         x = F.relu(x)
+#         x = self.fc1(x)
+#         x = self.norm2(x)
+#         x = F.relu(x)
+#         x = self.output(x)
+#         # x = F.sigmoid(x)
+#         return x
 
 
 class PopoolaMLP(nn.Module):
     def __init__(self) -> None:
         super(PopoolaMLP, self).__init__()
-        self.fc1 = nn.Linear(39, 128)
-        self.norm1 = nn.LayerNorm(128)
-        self.fc2 = nn.Linear(128, 128)
-        self.norm2 = nn.LayerNorm(128)
-        self.fc3 = nn.Linear(128, 1)
+        self.fc1 = nn.Linear(39, 148)
+        self.norm1 = nn.LayerNorm(148)
+        self.fc2 = nn.Linear(148, 148)
+        self.norm2 = nn.LayerNorm(148)
+        self.fc3 = nn.Linear(148, 1)
+
+        nn.init.xavier_normal_(self.fc1.weight)
+        nn.init.xavier_normal_(self.fc2.weight)
+        nn.init.xavier_normal_(self.fc3.weight)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -106,7 +135,7 @@ def train(
     criterion = CRITERION()
 
     if train_config.get("optimizer") == "adam":
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             net.parameters(),
             lr=train_config["lr"],
             weight_decay=train_config["weight_decay"],
