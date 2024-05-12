@@ -1,19 +1,15 @@
-from typing import Dict
-from flwr.common import NDArrays
-from ..neural_helper.mlp import (
-    PopoolaMLP,
-    FnidsMLP,
-    load_data,
-    train,
-    collect_metrics,
-    DEVICE,
-)
-from .federated_helpers import get_all_federated_loaders
-
 from collections import OrderedDict
 import torch
 import torch.nn as nn
 import flwr as fl
+
+from neural_helper.mlp import (
+    MLP,
+    train,
+    evaluate_model,
+    DEVICE,
+)
+from federated.federated_helpers import get_all_federated_loaders
 
 
 class Client(fl.client.NumPyClient):
@@ -37,14 +33,14 @@ class Client(fl.client.NumPyClient):
 
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
-        loss, accuracy = collect_metrics(self.model, self.eval_loader)
+        loss, accuracy = evaluate_model(self.model, self.eval_loader)
         return float(loss), len(self.eval_loader), {"accuracy": float(accuracy)}
 
 
 if __name__ == "__main__":
-    LOADERS = get_all_federated_loaders()
+    LOADERS = get_all_federated_loaders(batch_size=32)
 
-    model = PopoolaMLP().to(DEVICE)
+    model = MLP().to(DEVICE)
     train_loader, eval_loader = LOADERS[0]
 
     fl.client.start_client(

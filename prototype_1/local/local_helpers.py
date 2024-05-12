@@ -1,7 +1,7 @@
 from typing import Dict, Tuple
 from torch.utils.data import DataLoader
 
-from ..pre_process import (
+from pre_process.pre_process import (
     get_train_and_test_dfs,
     get_standardized_train_test_data,
     get_prepared_data_for_loader,
@@ -9,7 +9,7 @@ from ..pre_process import (
     get_df,
     ScalerType,
 )
-from ..neural_helper.mlp import get_train_and_test_loaders, get_test_loader
+from neural_helper.mlp import get_train_and_test_loaders, get_test_loader
 
 
 def get_local_loaders(

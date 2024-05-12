@@ -1,9 +1,9 @@
 import json
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from typing import Dict, Tuple, List
+from typing import Dict
 
-from ..pre_process import CLIENTS_NAMES
+from pre_process.pre_process import CLIENTS_NAMES
 
 
 TRAIN_LOGS_PATH = "prototype_1/local/metrics/train_logs.json"

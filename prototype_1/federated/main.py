@@ -7,9 +7,9 @@ import argparse
 import uuid
 import datetime
 
-from ..pre_process import BATCH_SIZE
-from ..neural_helper.mlp import MLP, train, evaluate_model, DEVICE, TRAIN_CONFIG
-from .federated_helpers import (
+from pre_process.pre_process import BATCH_SIZE
+from neural_helper.mlp import MLP, train, evaluate_model, DEVICE, TRAIN_CONFIG
+from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
     set_parameters,
@@ -17,7 +17,7 @@ from .federated_helpers import (
     PATH_TO_METRICS_FOLDER,
     FederatedMetricsRecord,
 )
-from .strategies import create_federated_strategy
+from federated.strategies import create_federated_strategy
 
 
 class FlowerNumPyClient(fl.client.NumPyClient):

@@ -1,6 +1,8 @@
 import unittest
-from .federated_helpers import get_all_federated_loaders
 from typing import List
+
+from federated.federated_helpers import get_all_federated_loaders
+
 
 LOADERS = get_all_federated_loaders()
 

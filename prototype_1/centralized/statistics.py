@@ -2,7 +2,7 @@ import json
 import os
 from scipy import stats
 
-from .centralized_helpers import GroupByCentralizedMetricsRecorder
+from centralized.centralized_helpers import GroupByCentralizedMetricsRecorder
 
 
 METRICS_PATH = "./prototype_1/centralized/metrics"

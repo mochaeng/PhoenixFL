@@ -1,14 +1,14 @@
 import argparse
 import json
 
-from ..pre_process import (
+from pre_process.pre_process import (
     CLIENTS_PATH,
     get_df,
     get_standardized_data,
     get_prepared_data_for_loader,
     BATCH_SIZE,
 )
-from ..neural_helper.mlp import (
+from neural_helper.mlp import (
     DEVICE,
     train,
     evaluate_model,
@@ -16,7 +16,7 @@ from ..neural_helper.mlp import (
     get_test_loader,
     TRAIN_CONFIG,
 )
-from .centralized_helpers import print_headers, get_centralized_data
+from centralized.centralized_helpers import print_headers, get_centralized_data
 
 
 PATH_TO_SAVE = "./prototype_1/centralized/metrics"

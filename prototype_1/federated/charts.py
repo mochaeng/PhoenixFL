@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.figure import Figure
 
-from ..pre_process import CLIENTS_NAMES
+from pre_process.pre_process import CLIENTS_NAMES
 
 
 METRICS_PATH = "prototype_1/federated/metrics/"

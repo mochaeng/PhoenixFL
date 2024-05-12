@@ -1,17 +1,11 @@
-import pandas as pd
 import torch
 import torch.optim as optim
-import torch.nn as nn
 from skorch import NeuralNetBinaryClassifier
 from sklearn.model_selection import GridSearchCV
 import os
 
-from .helpers import (
-    CENTRALIZED_DATASET_PATH,
-    PopoolaMLP,
-    PATH_TO_SAVE_RESULTS,
-)
-from ..pre_process import (
+from tunning.helpers import CENTRALIZED_DATASET_PATH, PopoolaMLP, PATH_TO_SAVE_RESULTS
+from pre_process.pre_process import (
     get_standardized_data,
     get_df,
     get_fit_scaler_from_df,

@@ -1,12 +1,12 @@
 import argparse
 import json
 
-from ..pre_process import CLIENTS_PATH, BATCH_SIZE
-from ..neural_helper.mlp import train, evaluate_model, MLP, DEVICE, TRAIN_CONFIG
-from .local_helpers import get_local_loaders, get_eval_test_loader
+from local.local_helpers import get_local_loaders, get_eval_test_loader
+from pre_process.pre_process import CLIENTS_PATH, BATCH_SIZE
+from neural_helper.mlp import train, evaluate_model, MLP, DEVICE, TRAIN_CONFIG
+
 
 PATH_TO_SAVE = "./prototype_1/local/metrics"
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simulating the training of ML models")
