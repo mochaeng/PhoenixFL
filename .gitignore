@@ -1,9 +1,14 @@
-/datasets/NF*/
-/datasets/nf*/
-/datasets/zip-files/
-/datasets/pre-processed/train-test/
+# originals (Gigabytes datasets)
+**/originals/NF*/
+**/originals/nf*/
+**/originals/zip-files/**
+**/originals/pre-processed/train-test/
 
-# no temporary files 
+# sample datasets from other sources
+**/pre-processed/datasets/**
+**/pre-processed/ita/**
+
+# no temporary files for federated learning
 **/federated/metrics/TEMP_*
 
 /venv/
