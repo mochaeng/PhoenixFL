@@ -1,6 +1,6 @@
 # MLP
 
-Here contains the code for training and testing a binary classifier using a **Multilayer Perceptron (MLP)** architecture.
+Here contains the code for training and evaluate a binary classifier using a **Multilayer Perceptron (MLP)** architecture.
 
 For now there are two MLP architectures available.
 
