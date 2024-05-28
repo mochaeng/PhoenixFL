@@ -6,8 +6,8 @@ from typing import Dict
 from pre_process.pre_process import CLIENTS_NAMES
 
 
-TRAIN_LOGS_PATH = "prototype_1/local/metrics/train_logs.json"
-PATH_TO_SAVE_CHARTS = "prototype_1/local/charts/"
+TRAIN_LOGS_PATH = "local/metrics/train_logs.json"
+PATH_TO_SAVE_CHARTS = "local/charts/"
 
 if __name__ == "__main__":
     with open(TRAIN_LOGS_PATH, "r+") as file:
@@ -32,10 +32,10 @@ if __name__ == "__main__":
         axes_list[idx].plot(
             x,
             y,
-            marker="o",
+            marker="^",
             color="#FF8C00",
-            mfc="none",
-            markersize=12,
+            # mfc="none",
+            markersize=8,
         )
         axes_list[idx].set(title=client_name)
         # axes_list[idx].set_yscale("logit")
@@ -47,6 +47,7 @@ if __name__ == "__main__":
         #     [min(x) - 1, max(x) + 1, round(min(y)) - 1, round(max(y)) + 1]
         # )
         axes_list[idx].yaxis.set_major_formatter(mticker.ScalarFormatter())
+        axes_list[idx].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
         axes_list[idx].grid()
 
     fig.tight_layout()
