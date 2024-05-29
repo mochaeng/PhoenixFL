@@ -28,9 +28,7 @@ class FederatedMetrics:
         self.__metrics: dict[str, MetricType] = {}
         self.has_new_model_started = False
 
-    def add_client_evaluated_results(
-        self, server_round: float, client_name: str, results: dict[str, float]
-    ):
+    def add_client_evaluated_results(self, client_name: str, results: dict[str, float]):
         if client_name in self.__metrics:
             for metric_name, value in results.items():
                 self.__metrics[client_name][metric_name][-1].append(value)

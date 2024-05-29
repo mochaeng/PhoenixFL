@@ -22,6 +22,12 @@ if __name__ == "__main__":
     strategy_name = args.algo_name
 
     metrics_path = os.path.join(METRICS_FOLDER_PATH, f"metrics_{strategy_name}.json")
+
+    if not os.path.exists(metrics_path):
+        raise ValueError(
+            f"no metrics found for {strategy_name}. You should train with it first for getting the results file"
+        )
+
     with open(metrics_path, "r+") as file:
         metrics = json.load(file)
 
@@ -33,13 +39,13 @@ if __name__ == "__main__":
         for client_name in metrics.keys():
             client_metrics = metrics[client_name]
 
-            def get_metrics_per_model():
+            def get_last_round_accuracy():
                 return {
                     metric_name: list(map(lambda rounds: rounds[-1], models))
                     for metric_name, models in metrics[client_name].items()
                 }
 
-            values = get_metrics_per_model()
+            values = get_last_round_accuracy()
 
             file.write(f"[{client_name}]\n")
             df = pd.DataFrame.from_dict(values)

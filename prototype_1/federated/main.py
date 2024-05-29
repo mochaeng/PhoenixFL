@@ -98,7 +98,7 @@ def federated_evaluation_results(server_round, metrics) -> None:
         assert cid_ == cid
 
         del results["final_loss"]
-        federated_metrics.add_client_evaluated_results(server_round, name, results)
+        federated_metrics.add_client_evaluated_results(name, results)
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -129,14 +129,12 @@ if __name__ == "__main__":
         type=int,
         help="The number of clients who will train in a round",
         default=TOTAL_NUMBER_OF_CLIENTS,
-        choices=[range(1, TOTAL_NUMBER_OF_CLIENTS + 1)],
     )
     parser.add_argument(
         "--eval-clients",
         type=int,
         help="The number of clients who will evaluate in a round",
         default=TOTAL_NUMBER_OF_CLIENTS,
-        choices=[range(1, TOTAL_NUMBER_OF_CLIENTS + 1)],
     )
     parser.add_argument(
         "--save-results",
@@ -169,7 +167,16 @@ if __name__ == "__main__":
 
     if num_models <= 0:
         raise ValueError(
-            "you should train at least one model ;-;. Come on you can do it!"
+            "you should train at least one model :(  Come on you can do it!"
+        )
+
+    if fit_clients <= 0 or fit_clients > TOTAL_NUMBER_OF_CLIENTS:
+        raise ValueError(
+            f"Number of clients to train should be between: 1 and {TOTAL_NUMBER_OF_CLIENTS}"
+        )
+    if eval_clients <= 0 or eval_clients > TOTAL_NUMBER_OF_CLIENTS:
+        raise ValueError(
+            f"Number of clients to test should be between: 1 and {TOTAL_NUMBER_OF_CLIENTS}"
         )
 
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
@@ -178,8 +185,8 @@ if __name__ == "__main__":
     strategy_config = {
         "fraction_fit": fit_clients / TOTAL_NUMBER_OF_CLIENTS,
         "fraction_evaluate": eval_clients / TOTAL_NUMBER_OF_CLIENTS,
-        "min_fit_clients": TOTAL_NUMBER_OF_CLIENTS,
-        "min_evaluate_clients": TOTAL_NUMBER_OF_CLIENTS,
+        "min_fit_clients": fit_clients,
+        "min_evaluate_clients": eval_clients,
         "min_available_clients": TOTAL_NUMBER_OF_CLIENTS,
         "evaluate_metrics_aggregation_fn": weighted_average,
         "initial_parameters": fl.common.ndarrays_to_parameters(starting_params),
