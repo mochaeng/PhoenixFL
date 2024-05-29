@@ -4,6 +4,10 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from scipy.sparse import spmatrix
 import joblib
 from typing import Dict, List, Tuple, Union
+from result import Result, Ok, Err
+import json
+import os
+
 
 PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
 # PATH_SCALER = "prototype_1/centralized/models/scaler_centralized_model.pkl"
@@ -52,7 +56,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 512
+BATCH_SIZE = 124
 
 
 def get_df(path: str) -> pd.DataFrame:
@@ -123,3 +127,18 @@ def get_prepared_data_for_loader(train_data=None, test_data=None):
     if test_data:
         data.update({"x_test": test_data["x"], "y_test": test_data["y"]})
     return data
+
+
+def read_file_as_dict(folder_path: str, file_name: str) -> Result[dict, str]:
+    file_path = os.path.join(folder_path, file_name)
+    if not os.path.exists(file_path):
+        return Err("not such file found")
+
+    try:
+        with open(file_path) as file:
+            metrics = json.load(file)
+    except FileNotFoundError as err:
+        print("WTF")
+        return Err(f"could not read file: {err}")
+
+    return Ok(metrics)

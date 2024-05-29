@@ -1,15 +1,15 @@
 import os
-import json
 from typing import Optional, List, Tuple
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.figure import Figure
+from result import Ok, Err
 
-from pre_process.pre_process import CLIENTS_NAMES
+from pre_process.pre_process import CLIENTS_NAMES, read_file_as_dict
 
 
-METRICS_PATH = "prototype_1/federated/metrics/"
-CHARTS_PATH = "prototype_1/federated/charts/"
+METRICS_PATH = "federated/metrics/"
+CHARTS_PATH = "federated/charts/"
 
 
 class FederatedMetricsChart:
@@ -141,9 +141,6 @@ def get_weighted_charts(
     return charts
 
 
-# def get_local_chart_by_metric()
-
-
 def get_all_local_charts_by_metric(
     metric_name: str,
     metrics: dict,
@@ -212,32 +209,59 @@ def get_all_local_charts_by_metric(
     return fig
 
 
+def get_metrics_from_all_strategies(strategy_metrics_files: dict) -> dict:
+    metrics = {}
+    for strategy_name in strategy_metrics_files.keys():
+        file_name = strategy_metrics_files[strategy_name]
+        match read_file_as_dict(METRICS_PATH, file_name):
+            case Ok(metrics_values):
+                del metrics_values["weighted_metrics"]
+                metrics[strategy_name] = metrics_values
+            case Err(_):
+                print(f"no file metrics for {file_name}")
+    return metrics
+
+
+def get_metric_versus_rounds_with_strategieschart(
+    desired_metric: str, strategy_metrics_files: dict
+) -> Figure:
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7, 7))
+    axs = axs.flatten()
+    chart_letter = "a"
+
+    strategies_metrics = get_metrics_from_all_strategies(strategy_metrics_files)
+
+    for strategy_name, client in strategies_metrics.items():
+        for client_name, client_data in client.items():
+            for metric_name, metric_values in client_data.items():
+                if metric_name != desired_metric:
+                    continue
+
+                models = metric_values
+                rounds = models[0]
+
+                x = range(1, len(rounds) + 1)
+                y = rounds
+
+                client_idx = int(client_name.split(":")[0].split("-")[1]) - 1
+                axs[client_idx].plot(x, y)
+                axs[client_idx].set(title=client_name)
+                axs[client_idx].xaxis.set_major_locator(
+                    mticker.MaxNLocator(integer=True)
+                )
+                axs[client_idx].set_xlabel("Communication rounds", linespacing=1.5)
+                axs[client_idx].set_ylabel(metric_name)
+
+    fig.tight_layout()
+    return fig
+
+
 if __name__ == "__main__":
-    metrics_file_path = os.path.join(METRICS_PATH, "metrics.json")
-    with open(metrics_file_path, "r+") as f:
-        try:
-            metrics = json.load(f)
-        except json.JSONDecodeError as err:
-            raise ValueError(f"error: {err}")
+    strategies_names = ["fedavg", "fedprox"]
+    strategy_metrics = {
+        strategy_name: f"metrics_{strategy_name}.json"
+        for strategy_name in strategies_names
+    }
 
-    strategies = ["fedavg", "fedprox"]
-    metrics_names = ["accuracy"]
-    metrics_y_axis = ["ACC"]
-
-    metric_to_filter = metrics_names[0]
-
-    weighted_charts = get_weighted_charts(
-        metrics, metrics_names, metric_to_filter, strategies
-    )
-
-    local_charts = get_all_local_charts_by_metric(
-        metrics_names[0],
-        metrics,
-        strategies,
-        CLIENTS_NAMES,
-        {"y_label": "ACC", "x_label": "Communication rounds"},
-    ).savefig(f"{os.path.join(CHARTS_PATH, 'local_charts.png')}")
-
-    # acc_chart = get_weighted_chart_by_metric("accuracy", models)
-    # acc_chart.tight_layout()
-    # acc_chart.savefig(f"{os.path.join(CHARTS_PATH, 'chart.pdf')}")
+    figure = get_metric_versus_rounds_with_strategieschart("accuracy", strategy_metrics)
+    figure.savefig(os.path.join(CHARTS_PATH, "metric_versus_rounds.png"))

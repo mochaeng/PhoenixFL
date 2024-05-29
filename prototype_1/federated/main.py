@@ -1,11 +1,10 @@
+import os
 import flwr as fl
 from flwr.common import Metrics, Scalar
 from flwr.server import History
 from typing import List, Tuple, Dict
 import json
 import argparse
-import uuid
-import datetime
 
 from pre_process.pre_process import BATCH_SIZE
 from neural_helper.mlp import MLP, train, evaluate_model, DEVICE, TRAIN_CONFIG
@@ -13,9 +12,9 @@ from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
     set_parameters,
-    NUM_CLIENTS,
+    TOTAL_NUMBER_OF_CLIENTS,
+    FederatedMetrics,
     PATH_TO_METRICS_FOLDER,
-    FederatedMetricsRecord,
 )
 from federated.strategies import create_federated_strategy
 
@@ -35,18 +34,6 @@ class FlowerNumPyClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         server_round = config["server_round"]
         del config["server_round"]
-
-        # possible_hyperparameters = [
-        #     "proximal_mu",
-        #     "momentum",
-        #     "weight_decay",
-        #     "optimizer",
-        # ]
-        # train_config = {
-        #     "epochs": config["epochs"],
-        #     "lr": config["lr"],
-        #     **{key: config[key] for key in possible_hyperparameters if key in config},
-        # }
 
         print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
@@ -96,22 +83,22 @@ def client_fn(cid: str):
         cid_,
         name,
         model,
-        train_loader,
-        eval_loader,
+        train_loader=train_loader,
+        eval_loader=eval_loader,
     ).to_client()
 
 
-def federated_evaluation_results(
-    server_round, metrics: List[Tuple[int, Metrics]]
-) -> None:
+def federated_evaluation_results(server_round, metrics) -> None:
     print("\nFederated evaluation results\n")
-    global metrics_record
+    global federated_metrics
 
     for cid, results in metrics:
         idx = cid % len(LOADERS)
         (cid_, name), _ = LOADERS[idx]
         assert cid_ == cid
-        metrics_record.set_values(server_round, name, results)
+
+        del results["final_loss"]
+        federated_metrics.add_client_evaluated_results(name, results)
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -132,10 +119,22 @@ if __name__ == "__main__":
         default=2,
     )
     parser.add_argument(
-        "--num-clients",
+        "--num-models",
         type=int,
-        help="The number of clients that will be participating in the training process",
-        default=NUM_CLIENTS,
+        help="The total number of models you want to simulate",
+        default=1,
+    )
+    parser.add_argument(
+        "--fit-clients",
+        type=int,
+        help="The number of clients who will train in a round",
+        default=TOTAL_NUMBER_OF_CLIENTS,
+    )
+    parser.add_argument(
+        "--eval-clients",
+        type=int,
+        help="The number of clients who will evaluate in a round",
+        default=TOTAL_NUMBER_OF_CLIENTS,
     )
     parser.add_argument(
         "--save-results",
@@ -159,26 +158,36 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     num_rounds = args.num_rounds
-    num_clients = args.num_clients
+    fit_clients = args.fit_clients
+    eval_clients = args.eval_clients
     is_save_results = args.save_results
     strategy_name = args.algo
     proximal_mu = args.mu
+    num_models = args.num_models
 
-    metrics_record = FederatedMetricsRecord(strategy_name)
+    if num_models <= 0:
+        raise ValueError(
+            "you should train at least one model :(  Come on you can do it!"
+        )
+
+    if fit_clients <= 0 or fit_clients > TOTAL_NUMBER_OF_CLIENTS:
+        raise ValueError(
+            f"Number of clients to train should be between: 1 and {TOTAL_NUMBER_OF_CLIENTS}"
+        )
+    if eval_clients <= 0 or eval_clients > TOTAL_NUMBER_OF_CLIENTS:
+        raise ValueError(
+            f"Number of clients to test should be between: 1 and {TOTAL_NUMBER_OF_CLIENTS}"
+        )
+
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
     starting_params = get_parameters(MLP().to(DEVICE))
 
-    if is_save_results:
-        time_str = datetime.datetime.now().strftime("%I:%M%p_%B%d%Y")
-        uuid_hex = uuid.uuid4().hex
-        TEMP_FILE_NAME = f"{PATH_TO_METRICS_FOLDER}/TEMP_results_{strategy_name}_{time_str}_{uuid_hex}.json"
-
     strategy_config = {
-        "fraction_fit": 1.0,
-        "fraction_evaluate": 1.0,
-        "min_fit_clients": num_clients,
-        "min_evaluate_clients": num_clients,
-        "min_available_clients": num_clients,
+        "fraction_fit": fit_clients / TOTAL_NUMBER_OF_CLIENTS,
+        "fraction_evaluate": eval_clients / TOTAL_NUMBER_OF_CLIENTS,
+        "min_fit_clients": fit_clients,
+        "min_evaluate_clients": eval_clients,
+        "min_available_clients": TOTAL_NUMBER_OF_CLIENTS,
         "evaluate_metrics_aggregation_fn": weighted_average,
         "initial_parameters": fl.common.ndarrays_to_parameters(starting_params),
         "on_fit_config_fn": fit_config,
@@ -194,28 +203,38 @@ if __name__ == "__main__":
 
     clients_resources = {"num_cpus": 3, "num_gpus": 1}
 
-    history: History = fl.simulation.start_simulation(
-        client_fn=client_fn,
-        num_clients=num_clients,
-        config=fl.server.ServerConfig(num_rounds=num_rounds),
-        strategy=strategy,
-        client_resources=clients_resources,
-    )
+    federated_metrics = FederatedMetrics()
+    weighteds_metrics = []
 
-    # # self.losses_distributed: List[Tuple[int, float]] = []
-    # # self.losses_centralized: List[Tuple[int, float]] = []
-    # # self.metrics_distributed_fit: Dict[str, List[Tuple[int, Scalar]]] = {}
-    # # self.metrics_distributed: Dict[str, List[Tuple[int, Scalar]]] = {}
-    # # self.metrics_centralized: Dict[str, List[Tuple[int, Scalar]]] = {}
+    for num_model in range(num_models):
+        history: History = fl.simulation.start_simulation(
+            client_fn=client_fn,
+            num_clients=TOTAL_NUMBER_OF_CLIENTS,
+            config=fl.server.ServerConfig(num_rounds=num_rounds),
+            strategy=strategy,
+            client_resources=clients_resources,
+        )
 
-    weighted_metrics = {
-        "metrics_distributed": history.metrics_distributed,
-        "losses_distributed": history.losses_distributed,
-    }
-    metrics_record.set_weighted_values(weighted_metrics)
+        # # self.losses_distributed: List[Tuple[int, float]] = []
+        # # self.losses_centralized: List[Tuple[int, float]] = []
+        # # self.metrics_distributed_fit: Dict[str, List[Tuple[int, Scalar]]] = {}
+        # # self.metrics_distributed: Dict[str, List[Tuple[int, Scalar]]] = {}
+        # # self.metrics_centralized: Dict[str, List[Tuple[int, Scalar]]] = {}
+
+        weighted_metrics = {
+            "metrics_distributed": history.metrics_distributed,
+            "losses_distributed": history.losses_distributed,
+        }
+        weighteds_metrics.append({f"model_{num_model + 1}": weighted_metrics})
+
+        if num_model < num_models - 1:
+            federated_metrics.add_new_round()
+
+    federated_metrics.add_weighteds_metrics(weighteds_metrics)
 
     if is_save_results:
-        with open(TEMP_FILE_NAME, "w+") as f:
-            json.dump(metrics_record.get(), f, indent=4)
-
-    print(f"FINAL: {metrics_record}")
+        file_path = os.path.join(
+            PATH_TO_METRICS_FOLDER, f"metrics_{strategy_name}.json"
+        )
+        with open(file_path, "w+") as f:
+            json.dump(federated_metrics.get_metrics(), f, indent=4)

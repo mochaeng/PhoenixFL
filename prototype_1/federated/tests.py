@@ -4,7 +4,7 @@ from typing import List
 from federated.federated_helpers import get_all_federated_loaders
 
 
-LOADERS = get_all_federated_loaders()
+LOADERS = get_all_federated_loaders(batch_size=1024)
 
 
 def client_fn(cid: int):

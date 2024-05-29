@@ -13,63 +13,44 @@ from pre_process.pre_process import (
     get_prepared_data_for_loader,
 )
 
-NUM_CLIENTS = 4
+TOTAL_NUMBER_OF_CLIENTS = 4
 NUM_ROUNDS = 3
 
-PATH_TO_METRICS_FOLDER = "./prototype_1/federated/metrics"
+PATH_TO_METRICS_FOLDER = "federated/metrics"
 METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "metrics.json")
 WEIGHTED_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "weighted.json")
 
+MetricType = dict[str, list[list[float]]]
 
-class FederatedMetricsRecord:
-    def __init__(self, strategy_name) -> None:
-        self.strategy_name = strategy_name
-        self.__metrics = {"strategy": strategy_name}
 
-    def __repr__(self) -> str:
-        return str(self.__metrics)
+class FederatedMetrics:
+    def __init__(self) -> None:
+        self.__metrics: dict[str, MetricType] = {}
+        self.has_new_model_started = False
 
-    def set_values(self, server_round, name, values):
-        round_key = f"round_{server_round}"
-        if round_key not in self.__metrics:
-            self.__metrics[round_key] = {}
-        self.__metrics[round_key][name] = values
+    def add_client_evaluated_results(self, client_name: str, results: dict[str, float]):
+        if client_name in self.__metrics:
+            for metric_name, value in results.items():
+                self.__metrics[client_name][metric_name][-1].append(value)
 
-    def set_weighted_values(self, values):
-        self.__metrics["weighted"] = values
+        else:
+            self.__metrics[client_name] = {
+                metric_name: [[value]] for metric_name, value in results.items()
+            }
 
-    def get(self):
+    def add_new_round(self):
+        if len(self.__metrics.keys()) == 0:
+            return ValueError("no client data")
+
+        for client_name in self.__metrics.keys():
+            for metric_name in self.__metrics[client_name]:
+                self.__metrics[client_name][metric_name].append([])
+
+    def add_weighteds_metrics(self, values):
+        self.__metrics["weighted_metrics"] = values
+
+    def get_metrics(self):
         return self.__metrics
-
-
-# class AggregatedFederatedMetricsRecorder:
-#     def __init__(
-#         self,
-#         num_models: int,
-#         num_rounds: int,
-#         client_names: List[str],
-#         metrics_names: List[str],
-#     ) -> None:
-#         self.client_names = client_names
-#         self.metrics_names = metrics_names
-#         self.models = list(range(1, num_models + 1))
-#         self.rounds = list(range(1, num_rounds + 1))
-#         self._metrics = {
-#             f"model_{num_model}": {
-#                 f"round_{num_round}": {
-#                     client_name: {metric_name: [] for metric_name in self.metrics_names}
-#                     for client_name in self.client_names
-#                 }
-#                 for num_round in self.rounds
-#             }
-#             for num_model in self.models
-#         }
-
-#     def add(self, num_model, num_round, name, values):
-#         self._metrics[num_model][num_round][name] = values
-
-#     def get(self):
-#         return self._metrics
 
 
 def get_parameters(net) -> List[np.ndarray]:

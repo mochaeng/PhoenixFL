@@ -12,14 +12,14 @@ from torcheval.metrics import (
 import copy
 from typing import Dict, Iterator, Tuple, Optional
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # type: ignore
 CRITERION = torch.nn.BCEWithLogitsLoss
 
 TRAIN_CONFIG = {
     "epochs": 10,
     "lr": 0.0001,
     "momentum": 0.99,
-    "weight_decay": 0.00001,
+    "weight_decay": 0.001,
     "optimizer": "adam",
 }
 
