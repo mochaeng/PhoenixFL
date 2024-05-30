@@ -7,8 +7,9 @@
 # sample datasets from other sources
 **/pre-processed/datasets/**
 **/pre-processed/ita/**
-**/pre-processed/std/**
-**/pre-processed/train-test
+**/pre-processed/std/** 
+**/pre-processed/popoola/**
+**/pre-processed/train-test/**
 
 # no temporary files for federated learning
 **/federated/metrics/TEMP_*
