@@ -23,12 +23,14 @@ def get_paths(file_extension):
     ]
 
 
+PATH_TO_PREPROCESSED = "datasets/pre-processed"
+TRAIN_TEST_PATH = f"{PATH_TO_PREPROCESSED}/train-test"
 PREPROCESSED_PATHS = {
-    "std": "pre-processed/datasets",
-    "popoola": "pre-processed/popoola",
-    "ita": "pre-processed/ita",
+    "phoenix": f"{PATH_TO_PREPROCESSED}/phoenix",
+    "std": f"{PATH_TO_PREPROCESSED}/std",
+    "popoola": f"{PATH_TO_PREPROCESSED}/popoola",
+    "ita": f"{PATH_TO_PREPROCESSED}/ita",
 }
-TRAIN_TEST_PATH = "pre-processed/train-test"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,7 +40,7 @@ if __name__ == "__main__":
         "--name",
         type=str,
         help="Which pre-processed datasets to be used",
-        choices=["std", "popoola", "ita"],
+        choices=["phoenix", "std", "popoola", "ita"],
     )
     parser.add_argument(
         "--test-perc",
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
     datasets_path = PREPROCESSED_PATHS.get(processed_name)
     if datasets_path is None:
-        raise ValueError("couldn't get the pre processed dataset type")
+        raise ValueError(f"no preproccesed called {processed_name}")
 
     match processed_name:
         case "ita":
@@ -68,8 +70,10 @@ if __name__ == "__main__":
 
     clients_path = get_paths(file_extension)
 
+    print("Starting...\n")
+
     for client_name, file_name in clients_path:
-        print(client_name)
+        print(f"Creating dataset for: {client_name}")
         client_file_path = os.path.join(datasets_path, file_name)
 
         match file_extension:
@@ -90,8 +94,8 @@ if __name__ == "__main__":
         df_test, test_distribution = get_df(x_test, y_test, columns, "test")
 
         name = file_name.split(".")[0]
-
         save_path = os.path.join(TRAIN_TEST_PATH, client_name)
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
@@ -103,6 +107,8 @@ if __name__ == "__main__":
 
         df_train.to_parquet(f"{save_path}/{name}_train.parquet", compression="gzip")
         df_test.to_parquet(f"{save_path}/{name}_test.parquet", compression="gzip")
+
+    print("Creating centralized dataset")
 
     train_dfs = []
     test_dfs = []

@@ -56,7 +56,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 124
+BATCH_SIZE = 164
 
 
 def get_df(path: str) -> pd.DataFrame:
