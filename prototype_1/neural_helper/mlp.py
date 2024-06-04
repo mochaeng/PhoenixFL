@@ -19,7 +19,7 @@ TRAIN_CONFIG = {
     "epochs": 10,
     "lr": 0.0001,
     "momentum": 0.99,
-    "weight_decay": 0.001,
+    "weight_decay": 0.01,
     "optimizer": "adam",
 }
 
@@ -52,7 +52,7 @@ TRAIN_CONFIG = {
 class PopoolaMLP(nn.Module):
     def __init__(self) -> None:
         super(PopoolaMLP, self).__init__()
-        self.fc1 = nn.Linear(39, 148)
+        self.fc1 = nn.Linear(40, 148)
         self.norm1 = nn.LayerNorm(148)
         self.fc2 = nn.Linear(148, 148)
         self.norm2 = nn.LayerNorm(148)

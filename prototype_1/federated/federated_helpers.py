@@ -4,8 +4,9 @@ from typing import Tuple, List, Dict
 import numpy as np
 from collections import OrderedDict
 import os
+from flwr.common import Scalar
 
-from neural_helper.mlp import get_train_and_test_loaders
+from neural_helper.mlp import get_train_and_test_loaders, TRAIN_CONFIG
 from pre_process.pre_process import (
     get_standardized_train_test_data,
     CLIENTS_PATH,
@@ -61,6 +62,23 @@ def set_parameters(net, parameters: List[np.ndarray]):
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
     net.load_state_dict(state_dict, strict=True)
+
+
+def fit_config(server_round: int) -> Dict[str, Scalar]:
+    merge_config = TRAIN_CONFIG.copy()
+    merge_config.update(
+        {
+            "server_round": server_round,
+        }
+    )
+    return merge_config
+
+
+def eval_config(server_round: int) -> Dict[str, Scalar]:
+    config: Dict[str, Scalar] = {
+        "server_round": server_round,
+    }
+    return config
 
 
 def get_all_federated_loaders(

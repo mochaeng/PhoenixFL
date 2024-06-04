@@ -1,4 +1,3 @@
-from typing import Callable, Dict, List, Tuple, Optional, Union
 import flwr as fl
 from flwr.common import (
     EvaluateRes,
@@ -6,21 +5,17 @@ from flwr.common import (
     Parameters,
     Scalar,
     NDArrays,
-    FitIns,
 )
-from flwr.server.client_manager import ClientManager
 from flwr.common.typing import Metrics
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy.aggregate import weighted_loss_avg
-from flwr.common.logger import log
-from logging import WARNING
+from overrides import override
+from typing import Callable, Dict, List, Tuple, Optional, Union
 
 
 MetricsFederatedEvalutionDataFn = Callable[[int, List[Tuple[int, Metrics]]], None]
 
 
 class FedAvgWithFederatedEvaluation(fl.server.strategy.FedAvg):
-    # pylint: disable=too-many-arguments,too-many-instance-attributes
     def __init__(
         self,
         *,
@@ -41,9 +36,7 @@ class FedAvgWithFederatedEvaluation(fl.server.strategy.FedAvg):
         initial_parameters: Optional[Parameters] = None,
         fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
-        on_federated_evaluation_results: Optional[
-            MetricsFederatedEvalutionDataFn
-        ] = None,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
     ) -> None:
         super().__init__(
             fraction_fit=fraction_fit,
@@ -65,45 +58,22 @@ class FedAvgWithFederatedEvaluation(fl.server.strategy.FedAvg):
         rep = f"FedAvgWithFederatedEvaluation(accept_failures={self.accept_failures})"
         return rep
 
+    @override
     def aggregate_evaluate(
         self,
         server_round: int,
         results: List[Tuple[ClientProxy, EvaluateRes]],
         failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
     ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        if not results:
-            return None, {}
-        if not self.accept_failures and failures:
-            return None, {}
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
+        ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
 
-        loss_aggregated = weighted_loss_avg(
-            [
-                (evaluate_res.num_examples, evaluate_res.loss)
-                for _, evaluate_res in results
-            ]
-        )
-
-        # results from federated evaluation
-        if self.on_federated_evaluation_results:
-            federated_evaluation_results = [
-                (int(client.cid), res.metrics) for client, res in results
-            ]
-            self.on_federated_evaluation_results(
-                server_round, federated_evaluation_results
-            )
-
-        metrics_aggregated = {}
-        if self.evaluate_metrics_aggregation_fn:
-            eval_metrics = [(res.num_examples, res.metrics) for _, res in results]
-            metrics_aggregated = self.evaluate_metrics_aggregation_fn(eval_metrics)
-        elif server_round == 1:
-            log(WARNING, "No evaluate_metrics_aggregation_fn provided")
-
-        return loss_aggregated, metrics_aggregated
+        return super().aggregate_evaluate(server_round, results, failures)
 
 
-class FedProxWithFederatedEvaluation(FedAvgWithFederatedEvaluation):
-    # pylint: disable=too-many-arguments,too-many-instance-attributes
+class FedProxWithFederatedEvaluation(fl.server.strategy.FedProx):
     def __init__(
         self,
         *,
@@ -124,10 +94,8 @@ class FedProxWithFederatedEvaluation(FedAvgWithFederatedEvaluation):
         initial_parameters: Optional[Parameters] = None,
         fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
-        on_federated_evaluation_results: Optional[
-            MetricsFederatedEvalutionDataFn
-        ] = None,
         proximal_mu: float,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
     ) -> None:
         super().__init__(
             fraction_fit=fraction_fit,
@@ -142,79 +110,275 @@ class FedProxWithFederatedEvaluation(FedAvgWithFederatedEvaluation):
             initial_parameters=initial_parameters,
             fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
             evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
-            on_federated_evaluation_results=on_federated_evaluation_results,
+            proximal_mu=proximal_mu,
         )
-        self.proximal_mu = proximal_mu
+        self.on_federated_evaluation_results = on_federated_evaluation_results
 
     def __repr__(self) -> str:
         rep = f"FedProxWithFederatedEvaluation(accept_failures={self.accept_failures})"
         return rep
 
-    def configure_fit(
-        self, server_round: int, parameters: Parameters, client_manager: ClientManager
-    ) -> List[Tuple[ClientProxy, FitIns]]:
-        client_config_pairs = super().configure_fit(
-            server_round, parameters, client_manager
-        )
-
-        return [
-            (
-                client,
-                FitIns(
-                    fit_ins.parameters,
-                    {**fit_ins.config, "proximal_mu": self.proximal_mu},
-                ),
-            )
-            for client, fit_ins in client_config_pairs
+    @override
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
         ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
+
+        return super().aggregate_evaluate(server_round, results, failures)
 
 
-class FederatedStrategy:
-    def __init__(self, **kwargs) -> None:
-        self.kwargs = kwargs
-
-    def create_strategy(
+class FedAdagradWithFederatedEvaluation(fl.server.strategy.FedAdagrad):
+    def __init__(
         self,
-        on_federated_evaluation_results: Optional[
-            MetricsFederatedEvalutionDataFn
+        *,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 1.0,
+        min_fit_clients: int = 2,
+        min_evaluate_clients: int = 2,
+        min_available_clients: int = 2,
+        evaluate_fn: Optional[
+            Callable[
+                [int, NDArrays, Dict[str, Scalar]],
+                Optional[Tuple[float, Dict[str, Scalar]]],
+            ]
         ] = None,
-    ):
-        raise NotImplementedError("Subclass must implement create_strategy")
-
-
-class FedProxStrategy(FederatedStrategy):
-    def create_strategy(
-        self,
-        on_federated_evaluation_results: Optional[
-            MetricsFederatedEvalutionDataFn
-        ] = None,
-    ):
-        return FedProxWithFederatedEvaluation(
-            on_federated_evaluation_results=on_federated_evaluation_results,
-            **self.kwargs,
+        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        accept_failures: bool = True,
+        initial_parameters: Parameters,
+        eta: float = 1e-1,
+        eta_l: float = 1e-1,
+        tau: float = 1e-9,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
+    ) -> None:
+        super().__init__(
+            fraction_fit=fraction_fit,
+            fraction_evaluate=fraction_evaluate,
+            min_fit_clients=min_fit_clients,
+            min_evaluate_clients=min_evaluate_clients,
+            min_available_clients=min_available_clients,
+            evaluate_fn=evaluate_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            eta=eta,
+            eta_l=eta_l,
+            tau=tau,
         )
+        self.on_federated_evaluation_results = on_federated_evaluation_results
 
-
-class FedAvgStrategy(FederatedStrategy):
-    def create_strategy(
-        self,
-        on_federated_evaluation_results: Optional[
-            MetricsFederatedEvalutionDataFn
-        ] = None,
-    ):
-        return FedAvgWithFederatedEvaluation(
-            on_federated_evaluation_results=on_federated_evaluation_results,
-            **self.kwargs,
+    def __repr__(self) -> str:
+        rep = (
+            f"FedAdagradWithFederatedEvaluation(accept_failures={self.accept_failures})"
         )
+        return rep
+
+    @override
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
+        ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
+
+        return super().aggregate_evaluate(server_round, results, failures)
 
 
-def create_federated_strategy(algorithm_name: str, **kwargs) -> FederatedStrategy:
-    strategies = {
-        "fedprox": FedProxStrategy,
-        "fedavg": FedAvgStrategy,
-    }
+class FedAdamWithFederatedEvaluation(fl.server.strategy.FedAdam):
+    def __init__(
+        self,
+        *,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 1.0,
+        min_fit_clients: int = 2,
+        min_evaluate_clients: int = 2,
+        min_available_clients: int = 2,
+        evaluate_fn: Optional[
+            Callable[
+                [int, NDArrays, Dict[str, Scalar]],
+                Optional[Tuple[float, Dict[str, Scalar]]],
+            ]
+        ] = None,
+        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        accept_failures: bool = True,
+        initial_parameters: Parameters,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        eta: float = 1e-1,
+        eta_l: float = 1e-1,
+        beta_1: float = 0.9,
+        beta_2: float = 0.99,
+        tau: float = 1e-9,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
+    ) -> None:
+        super().__init__(
+            fraction_fit=fraction_fit,
+            fraction_evaluate=fraction_evaluate,
+            min_fit_clients=min_fit_clients,
+            min_evaluate_clients=min_evaluate_clients,
+            min_available_clients=min_available_clients,
+            evaluate_fn=evaluate_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+            eta=eta,
+            eta_l=eta_l,
+            beta_1=beta_1,
+            beta_2=beta_2,
+            tau=tau,
+        )
+        self.on_federated_evaluation_results = on_federated_evaluation_results
 
-    strategy_class = strategies.get(algorithm_name)
-    if strategy_class:
-        return strategy_class(**kwargs)
-    raise ValueError("Invalid federated strategy")
+    def __repr__(self) -> str:
+        """Compute a string representation of the strategy."""
+        rep = f"FedAdamWithFederatedEvaluation(accept_failures={self.accept_failures})"
+        return rep
+
+    @override
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
+        ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
+
+        return super().aggregate_evaluate(server_round, results, failures)
+
+
+class FedYogiWithFederatedEvaluation(fl.server.strategy.FedYogi):
+    def __init__(
+        self,
+        *,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 1.0,
+        min_fit_clients: int = 2,
+        min_evaluate_clients: int = 2,
+        min_available_clients: int = 2,
+        evaluate_fn: Optional[
+            Callable[
+                [int, NDArrays, Dict[str, Scalar]],
+                Optional[Tuple[float, Dict[str, Scalar]]],
+            ]
+        ] = None,
+        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        accept_failures: bool = True,
+        initial_parameters: Parameters,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        eta: float = 1e-2,
+        eta_l: float = 0.0316,
+        beta_1: float = 0.9,
+        beta_2: float = 0.99,
+        tau: float = 1e-3,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
+    ) -> None:
+        super().__init__(
+            fraction_fit=fraction_fit,
+            fraction_evaluate=fraction_evaluate,
+            min_fit_clients=min_fit_clients,
+            min_evaluate_clients=min_evaluate_clients,
+            min_available_clients=min_available_clients,
+            evaluate_fn=evaluate_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+            eta=eta,
+            eta_l=eta_l,
+            beta_1=beta_1,
+            beta_2=beta_2,
+            tau=tau,
+        )
+        self.on_federated_evaluation_results = on_federated_evaluation_results
+
+    def __repr__(self) -> str:
+        """Compute a string representation of the strategy."""
+        rep = f"FedYogiWithFederatedEvaluation(accept_failures={self.accept_failures})"
+        return rep
+
+    @override
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
+        ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
+
+        return super().aggregate_evaluate(server_round, results, failures)
+
+
+class FedMedianWithFederatedEvaluation(fl.server.strategy.FedMedian):
+    def __init__(
+        self,
+        *,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 1.0,
+        min_fit_clients: int = 2,
+        min_evaluate_clients: int = 2,
+        min_available_clients: int = 2,
+        evaluate_fn: Optional[
+            Callable[
+                [int, NDArrays, Dict[str, Scalar]],
+                Optional[Tuple[float, Dict[str, Scalar]]],
+            ]
+        ] = None,
+        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        accept_failures: bool = True,
+        initial_parameters: Optional[Parameters] = None,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        on_federated_evaluation_results: MetricsFederatedEvalutionDataFn,
+    ):
+        self.on_federated_evaluation_results = on_federated_evaluation_results
+
+    def __repr__(self) -> str:
+        """Compute a string representation of the strategy."""
+        rep = (
+            f"FedMedianWithFederatedEvaluation(accept_failures={self.accept_failures})"
+        )
+        return rep
+
+    @override
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        federated_evaluation_results = [
+            (int(client.cid), res.metrics) for client, res in results
+        ]
+        self.on_federated_evaluation_results(server_round, federated_evaluation_results)
+
+        return super().aggregate_evaluate(server_round, results, failures)

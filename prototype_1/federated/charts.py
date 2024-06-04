@@ -225,7 +225,7 @@ def get_metrics_from_all_strategies(strategy_metrics_files: dict) -> dict:
 def get_metric_versus_rounds_with_strategieschart(
     desired_metric: str, strategy_metrics_files: dict
 ) -> Figure:
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7, 7))
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     axs = axs.flatten()
     chart_letter = "a"
 
@@ -244,7 +244,7 @@ def get_metric_versus_rounds_with_strategieschart(
                 y = rounds
 
                 client_idx = int(client_name.split(":")[0].split("-")[1]) - 1
-                axs[client_idx].plot(x, y)
+                axs[client_idx].plot(x, y, label=strategy_name)
                 axs[client_idx].set(title=client_name)
                 axs[client_idx].xaxis.set_major_locator(
                     mticker.MaxNLocator(integer=True)
@@ -252,12 +252,30 @@ def get_metric_versus_rounds_with_strategieschart(
                 axs[client_idx].set_xlabel("Communication rounds", linespacing=1.5)
                 axs[client_idx].set_ylabel(metric_name)
 
-    fig.tight_layout()
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    lines = [lines[0], lines[1], lines[2]]
+    fig.legend(
+        lines,
+        labels,
+        loc="upper right",
+        bbox_to_anchor=(1, 1.00),
+        ncol=4,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    # fig.tight_layout()
     return fig
 
 
 if __name__ == "__main__":
-    strategies_names = ["fedavg", "fedprox"]
+    strategies_names = [
+        "fedavg",
+        "fedprox",
+        "fedadagrad",
+        "fedadam",
+        "fedyogi",
+        "fedmedian",
+    ]
     strategy_metrics = {
         strategy_name: f"metrics_{strategy_name}.json"
         for strategy_name in strategies_names

@@ -75,6 +75,7 @@ if __name__ == "__main__":
     for client_name, file_name in clients_path:
         print(f"Creating dataset for: {client_name}")
         client_file_path = os.path.join(datasets_path, file_name)
+        print(client_file_path)
 
         match file_extension:
             case "csv":
@@ -104,6 +105,8 @@ if __name__ == "__main__":
 
         with open(f"{save_path}/test_dist.txt", "w") as f:
             f.write(test_distribution)
+
+        # print(df_train.columns)
 
         df_train.to_parquet(f"{save_path}/{name}_train.parquet", compression="gzip")
         df_test.to_parquet(f"{save_path}/{name}_test.parquet", compression="gzip")

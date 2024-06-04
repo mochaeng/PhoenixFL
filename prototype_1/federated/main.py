@@ -1,13 +1,13 @@
 import os
 import flwr as fl
-from flwr.common import Metrics, Scalar
+from flwr.common import Metrics
 from flwr.server import History
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 import json
 import argparse
 
 from pre_process.pre_process import BATCH_SIZE
-from neural_helper.mlp import MLP, train, evaluate_model, DEVICE, TRAIN_CONFIG
+from neural_helper.mlp import MLP, train, evaluate_model, DEVICE
 from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
@@ -15,8 +15,10 @@ from federated.federated_helpers import (
     TOTAL_NUMBER_OF_CLIENTS,
     FederatedMetrics,
     PATH_TO_METRICS_FOLDER,
+    fit_config,
+    eval_config,
 )
-from federated.strategies import create_federated_strategy
+from federated.create_strategy import create_federated_strategy
 
 
 class FlowerNumPyClient(fl.client.NumPyClient):
@@ -54,23 +56,6 @@ class FlowerNumPyClient(fl.client.NumPyClient):
             len(self.eval_loader),
             metrics,
         )
-
-
-def fit_config(server_round: int) -> Dict[str, Scalar]:
-    merge_config = TRAIN_CONFIG.copy()
-    merge_config.update(
-        {
-            "server_round": server_round,
-        }
-    )
-    return merge_config
-
-
-def eval_config(server_round: int) -> Dict[str, Scalar]:
-    config: Dict[str, Scalar] = {
-        "server_round": server_round,
-    }
-    return config
 
 
 def client_fn(cid: str):
@@ -145,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--algo",
         type=str,
-        choices=["fedprox", "fedavg"],
+        choices=["fedprox", "fedavg", "fedadagrad", "fedadam", "fedyogi", "fedmedian"],
         help="Federeated algorithm for aggregation",
         default="fedavg",
     )

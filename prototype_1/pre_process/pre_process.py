@@ -18,7 +18,7 @@ COLUMNS_TO_REMOVE = [
     "IPV4_SRC_ADDR",
     "IPV4_DST_ADDR",
     "L4_SRC_PORT",
-    "L4_DST_PORT",
+    # "L4_DST_PORT",
     "Attack",
 ]
 CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
@@ -56,7 +56,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 164
+BATCH_SIZE = 512
 
 
 def get_df(path: str) -> pd.DataFrame:
