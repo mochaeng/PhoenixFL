@@ -15,9 +15,9 @@ PATH_SCALER = "datasets/data-for-prototype-02/"
 
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
 COLUMNS_TO_REMOVE = [
-    "IPV4_SRC_ADDR",
-    "IPV4_DST_ADDR",
-    "L4_SRC_PORT",
+    # "IPV4_SRC_ADDR",
+    # "IPV4_DST_ADDR",
+    # "L4_SRC_PORT",
     # "L4_DST_PORT",
     "Attack",
 ]
@@ -44,7 +44,7 @@ DATASETS_PATHS = {
     },
     "CENTRALIZED": {
         "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.{file_extension}",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_train.{file_extension}",
+        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/centralized/centralized_test.{file_extension}",
     },
 }
 CLIENTS_PATH: List[Tuple[str, Dict]] = [

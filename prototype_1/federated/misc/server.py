@@ -32,6 +32,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 if __name__ == "__main__":
     starting_params = get_parameters(MLP().to(DEVICE))
 
+    fl.server.strategy.QFedAvg
+
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=1.0,
         fraction_evaluate=1.0,

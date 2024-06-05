@@ -377,21 +377,24 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dask"
-version = "2024.5.1"
+version = "2024.5.2"
 description = "Parallel PyData with Task Scheduling"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "dask-2024.5.1-py3-none-any.whl", hash = "sha256:af1cadd1fd1d1d44600ff5de43dd029e5668fdf87422131f4e3e3aa2a6a63555"},
-    {file = "dask-2024.5.1.tar.gz", hash = "sha256:e071fda67031c314569e37ca70b3e88bb30f1d91ff8ee4122b541845847cc264"},
+    {file = "dask-2024.5.2-py3-none-any.whl", hash = "sha256:acc2cfe41d9e0151c216ac40396dbe34df13bc3d8c51dfece190349e4f2243af"},
+    {file = "dask-2024.5.2.tar.gz", hash = "sha256:5c9722c44d0195e78b6e54197aa3302e6fcaaac2310fd3014560bcb86253dcb3"},
 ]
 
 [package.dependencies]
 click = ">=8.1"
 cloudpickle = ">=1.5.0"
+dask-expr = {version = ">=1.1,<1.2", optional = true, markers = "extra == \"dataframe\""}
 fsspec = ">=2021.09.0"
 importlib-metadata = {version = ">=4.13.0", markers = "python_version < \"3.12\""}
+numpy = {version = ">=1.21", optional = true, markers = "extra == \"array\""}
 packaging = ">=20.0"
+pandas = {version = ">=1.3", optional = true, markers = "extra == \"dataframe\""}
 partd = ">=1.2.0"
 pyyaml = ">=5.3.1"
 toolz = ">=0.10.0"
@@ -401,8 +404,24 @@ array = ["numpy (>=1.21)"]
 complete = ["dask[array,dataframe,diagnostics,distributed]", "lz4 (>=4.3.2)", "pyarrow (>=7.0)", "pyarrow-hotfix"]
 dataframe = ["dask-expr (>=1.1,<1.2)", "dask[array]", "pandas (>=1.3)"]
 diagnostics = ["bokeh (>=2.4.2)", "jinja2 (>=2.10.3)"]
-distributed = ["distributed (==2024.5.1)"]
+distributed = ["distributed (==2024.5.2)"]
 test = ["pandas[test]", "pre-commit", "pytest", "pytest-cov", "pytest-rerunfailures", "pytest-timeout", "pytest-xdist"]
+
+[[package]]
+name = "dask-expr"
+version = "1.1.2"
+description = "High Level Expressions for Dask"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "dask_expr-1.1.2-py3-none-any.whl", hash = "sha256:3be69fb2d449b5edf4404e953b7f6e688426872c6eb10f239539ead716a06f7a"},
+    {file = "dask_expr-1.1.2.tar.gz", hash = "sha256:ce2e3803b638cdc67bc75326e1b0d36ea9d231fdddf086e727145a5a2769bed4"},
+]
+
+[package.dependencies]
+dask = "2024.5.2"
+pandas = ">=2"
+pyarrow = ">=7.0.0"
 
 [[package]]
 name = "filelock"
@@ -2505,4 +2524,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "4fc4859bc521b58d3719c05fdb9bfb9d6cbc907d2b107586ce2b81e6523f83f9"
+content-hash = "fa3db0b5312fa45de82a23b5bd1f76d86d49baa291d103ee232f57568e4cb513"

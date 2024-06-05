@@ -3,11 +3,44 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import os
 import argparse
+import dask.dataframe as dd
 
 
-def get_df(x, y, columns, distribution_name: str):
+COLUMNS_TO_REMOVE = [
+    "IPV4_SRC_ADDR",
+    "IPV4_DST_ADDR",
+    "L4_SRC_PORT",
+    # "L4_DST_PORT",
+]
+
+
+def get_duplicates_in_df(df: pd.DataFrame):
+    df_no_attack = df.drop(columns=["Attack"])
+    duplicates = df_no_attack[df_no_attack.duplicated()]
+    duplicates_with_attack = pd.merge(
+        duplicates, df["Attack"], left_index=True, right_index=True
+    )
+    result = duplicates_with_attack["Attack"].value_counts()
+    return list(zip(result.index.tolist(), result.values))
+
+
+# def get_duplicates_in_df(df: pd.DataFrame):
+#     df_no_attack = df.drop(columns=["Attack"])
+#     duplicates = df_no_attack[df_no_attack.duplicated()]
+#     duplicates_with_attack = pd.merge(
+#         duplicates, df["Attack"], left_index=True, right_index=True
+#     )
+#     result = duplicates_with_attack["Attack"].value_counts()
+
+#     return dict(zip(result.index.tolist(), result.values))
+
+
+def get_df(x, y, columns, distribution_name: str, extension):
     df = pd.DataFrame(data=x, columns=columns)
-    df["Attack"] = np.squeeze(y)
+
+    if extension == "parquet":
+        df["Attack"] = np.squeeze(y)
+
     train_distribution = (
         f"{distribution_name}\n{df['Attack'].value_counts().to_string()}"
     )
@@ -48,6 +81,12 @@ if __name__ == "__main__":
         help="The percentual of test distribution",
         default=0.2,
     )
+    parser.add_argument(
+        "--delete-columns",
+        type=bool,
+        help="The percentual of test distribution",
+        default=True,
+    )
 
     args = parser.parse_args()
     test_size = args.test_perc
@@ -73,9 +112,9 @@ if __name__ == "__main__":
     print("Starting...\n")
 
     for client_name, file_name in clients_path:
+        print("-" * 50)
         print(f"Creating dataset for: {client_name}")
         client_file_path = os.path.join(datasets_path, file_name)
-        print(client_file_path)
 
         match file_extension:
             case "csv":
@@ -83,16 +122,35 @@ if __name__ == "__main__":
             case "parquet":
                 df = pd.read_parquet(client_file_path, engine="pyarrow")
 
+        # df = df.drop(columns=COLUMNS_TO_REMOVE)
+
         x = df.iloc[:, :-1].values
         y = df.iloc[:, -1:].values
         x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_size, random_state=69, stratify=y, shuffle=True
+            x, y, test_size=test_size, random_state=69, stratify=y
         )
 
         columns = df.columns.delete(-1)
 
-        df_train, train_distribution = get_df(x_train, y_train, columns, "train")
-        df_test, test_distribution = get_df(x_test, y_test, columns, "test")
+        df_train, train_distribution = get_df(
+            x_train, y_train, columns, "train", file_extension
+        )
+        df_test, test_distribution = get_df(
+            x_test, y_test, columns, "test", file_extension
+        )
+
+        print(f"Train duplicates: {df_train.duplicated().sum()}")
+        print(
+            f"Train duplicates [no-attack]: {df_train.drop(columns=['Attack']).duplicated().sum()}"
+        )
+        print(f"Classes: {get_duplicates_in_df(df_train)}\n")  # type: ignore
+
+        print(f"Test duplicates: {df_test.duplicated().sum()}")
+        print(
+            f"Test duplicates [no-attack]: {df_test.drop(columns=['Attack']).duplicated().sum()}"
+        )
+        print(f"Classes: {get_duplicates_in_df(df_test)}\n")  # type: ignore
+        print("-" * 50)
 
         name = file_name.split(".")[0]
         save_path = os.path.join(TRAIN_TEST_PATH, client_name)
@@ -128,6 +186,17 @@ if __name__ == "__main__":
 
     train_centralized = pd.concat(train_dfs)
     test_centralized = pd.concat(test_dfs)
+
+    print(
+        # f"Train duplicates: {train_centralized.drop(columns=['Attack']).duplicated().sum()}"
+        f"Train duplicates: {train_centralized.duplicated().sum()}"
+    )
+    print(f"Classes: {get_duplicates_in_df(train_centralized)}\n")  # type: ignore
+    print(
+        # f"Test duplicates: {test_centralized.drop(columns=['Attack']).duplicated().sum()}\n"
+        f"Test duplicates: {test_centralized.duplicated().sum()}\n"
+    )
+    print(f"Classes: {get_duplicates_in_df(test_centralized)}\n")  # type: ignore
 
     path_to_centralized = os.path.join(TRAIN_TEST_PATH, "centralized")
     if not os.path.exists(path_to_centralized):
