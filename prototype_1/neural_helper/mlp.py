@@ -19,34 +19,61 @@ TRAIN_CONFIG = {
     "epochs": 10,
     "lr": 0.0001,
     "momentum": 0.99,
-    "weight_decay": 0.01,
+    "weight_decay": 0.0001,
     "optimizer": "adam",
 }
 
 
 class PopoolaMLP(nn.Module):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        input_layer_size: int = 39,
+        hidden_layers_size: list[int] = [128] * 2,
+        output_layer_size: int = 1,
+        dropout_prob: float = 0.3,
+    ) -> None:
         super(PopoolaMLP, self).__init__()
-        self.fc1 = nn.Linear(40, 128)
-        self.norm1 = nn.LayerNorm(128)
-        self.fc2 = nn.Linear(128, 128)
-        self.norm2 = nn.LayerNorm(128)
-        self.fc3 = nn.Linear(128, 1)
+        self.layers = nn.ModuleList()
 
-        nn.init.xavier_normal_(self.fc1.weight)
-        nn.init.xavier_normal_(self.fc2.weight)
-        nn.init.xavier_normal_(self.fc3.weight)
+        current_layer_size = input_layer_size
+        for layer_size in hidden_layers_size:
+            self.layers.append(nn.Linear(current_layer_size, layer_size))
+            self.layers.append(nn.LayerNorm(layer_size))
+            self.layers.append(nn.ReLU(inplace=True))
+            # self.layers.append(nn.Dropout(p=dropout_prob))
+            current_layer_size = layer_size
+        self.layers.append(nn.Linear(current_layer_size, output_layer_size))
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.norm1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = self.norm2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
-        # x = F.sigmoid(x)
+        for layer in self.layers:
+            x = layer(x)
         return x
+
+
+# class PopoolaMLP(nn.Module):
+#     def __init__(self) -> None:
+#         super(PopoolaMLP, self).__init__()
+#         self.fc1 = nn.Linear(39, 128)
+#         self.norm1 = nn.LayerNorm(128)
+#         self.fc2 = nn.Linear(128, 128)
+#         self.norm2 = nn.LayerNorm(128)
+#         self.fc3 = nn.Linear(128, 1)
+
+#         # nn.init.xavier_normal_(self.fc1.weight)
+#         # nn.init.xavier_normal_(self.fc2.weight)
+#         # nn.init.xavier_normal_(self.fc3.weight)
+
+
+#     def forward(self, x):
+#         x = self.fc1(x)
+#         x = self.norm1(x)
+#         x = F.relu(x)
+#         x = self.fc2(x)
+#         x = self.norm2(x)
+#         x = F.relu(x)
+#         x = self.fc3(x)
+#         # x = F.sigmoid(x)
+#         return x
 
 
 class FnidsMLP(nn.Module):
@@ -60,9 +87,7 @@ class FnidsMLP(nn.Module):
         x = self.fc1(x)
         x = self.norm1(x)
         x = F.relu(x)
-        x = self.fc2(x)
-        # x = F.sigmoid(x)  # using BCEWithLogitsLoss
-        return x
+        x = self.fc2(x)  # x = F.sigmoid(x)  # using BCEWithLogitsLoss return x
 
 
 def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, DataLoader]:
@@ -146,6 +171,7 @@ def train(
                         criterion(outputs, labels)
                         + (train_config["proximal_mu"] / 2) * proximal_term
                     )
+
                 else:
                     loss = criterion(outputs, labels)
 
@@ -164,7 +190,7 @@ def train(
         if is_epochs_logs:
             epochs_logs[f"epoch_{epoch}"] = {
                 "loss": float(epoch_loss),
-                "acc": float(epoch_acc),
+                # "acc": float(epoch_acc),
             }
 
         if is_verbose:
