@@ -14,6 +14,23 @@ COLUMNS_TO_REMOVE = [
 ]
 
 
+def __print_dataset_info(client_name, df_train, df_test):
+    print("-" * 50)
+    print(f"Creating dataset for: {client_name}")
+    print(f"Train duplicates: {df_train.duplicated().sum()}")
+    print(
+        f"Train duplicates [no-attack]: {df_train.drop(columns=['Attack']).duplicated().sum()}"
+    )
+    print(f"Classes: {get_duplicates_in_df(df_train)}\n")  # type: ignore
+
+    print(f"Test duplicates: {df_test.duplicated().sum()}")
+    print(
+        f"Test duplicates [no-attack]: {df_test.drop(columns=['Attack']).duplicated().sum()}"
+    )
+    print(f"Classes: {get_duplicates_in_df(df_test)}\n")  # type: ignore
+    print("-" * 50)
+
+
 def get_duplicates_in_df(df: pd.DataFrame):
     df_no_attack = df.drop(columns=["Attack"])
     duplicates = df_no_attack[df_no_attack.duplicated()]
@@ -61,8 +78,9 @@ TRAIN_TEST_PATH = f"{PATH_TO_PREPROCESSED}/train-test"
 PREPROCESSED_PATHS = {
     "phoenix": f"{PATH_TO_PREPROCESSED}/phoenix",
     "std": f"{PATH_TO_PREPROCESSED}/std",
-    "popoola": f"{PATH_TO_PREPROCESSED}/popoola",
     "ita": f"{PATH_TO_PREPROCESSED}/ita",
+    "popoola1": f"{PATH_TO_PREPROCESSED}/popoola-1",
+    "popoola2": f"{PATH_TO_PREPROCESSED}/popoola-2",
 }
 
 if __name__ == "__main__":
@@ -73,7 +91,7 @@ if __name__ == "__main__":
         "--name",
         type=str,
         help="Which pre-processed datasets to be used",
-        choices=["phoenix", "std", "popoola", "ita"],
+        choices=["phoenix", "std", "popoola1", "ita", "popoola2"],
     )
     parser.add_argument(
         "--test-perc",
@@ -112,8 +130,6 @@ if __name__ == "__main__":
     print("Starting...\n")
 
     for client_name, file_name in clients_path:
-        print("-" * 50)
-        print(f"Creating dataset for: {client_name}")
         client_file_path = os.path.join(datasets_path, file_name)
 
         match file_extension:
@@ -127,7 +143,12 @@ if __name__ == "__main__":
         x = df.iloc[:, :-1].values
         y = df.iloc[:, -1:].values
         x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_size, random_state=69, stratify=y
+            x,
+            y,
+            test_size=test_size,
+            random_state=69,
+            stratify=y,
+            shuffle=True,
         )
 
         columns = df.columns.delete(-1)
@@ -139,18 +160,7 @@ if __name__ == "__main__":
             x_test, y_test, columns, "test", file_extension
         )
 
-        print(f"Train duplicates: {df_train.duplicated().sum()}")
-        print(
-            f"Train duplicates [no-attack]: {df_train.drop(columns=['Attack']).duplicated().sum()}"
-        )
-        print(f"Classes: {get_duplicates_in_df(df_train)}\n")  # type: ignore
-
-        print(f"Test duplicates: {df_test.duplicated().sum()}")
-        print(
-            f"Test duplicates [no-attack]: {df_test.drop(columns=['Attack']).duplicated().sum()}"
-        )
-        print(f"Classes: {get_duplicates_in_df(df_test)}\n")  # type: ignore
-        print("-" * 50)
+        __print_dataset_info(client_name, df_train, df_test)
 
         name = file_name.split(".")[0]
         save_path = os.path.join(TRAIN_TEST_PATH, client_name)
@@ -163,8 +173,6 @@ if __name__ == "__main__":
 
         with open(f"{save_path}/test_dist.txt", "w") as f:
             f.write(test_distribution)
-
-        # print(df_train.columns)
 
         df_train.to_parquet(f"{save_path}/{name}_train.parquet", compression="gzip")
         df_test.to_parquet(f"{save_path}/{name}_test.parquet", compression="gzip")
@@ -187,16 +195,7 @@ if __name__ == "__main__":
     train_centralized = pd.concat(train_dfs)
     test_centralized = pd.concat(test_dfs)
 
-    print(
-        # f"Train duplicates: {train_centralized.drop(columns=['Attack']).duplicated().sum()}"
-        f"Train duplicates: {train_centralized.duplicated().sum()}"
-    )
-    print(f"Classes: {get_duplicates_in_df(train_centralized)}\n")  # type: ignore
-    print(
-        # f"Test duplicates: {test_centralized.drop(columns=['Attack']).duplicated().sum()}\n"
-        f"Test duplicates: {test_centralized.duplicated().sum()}\n"
-    )
-    print(f"Classes: {get_duplicates_in_df(test_centralized)}\n")  # type: ignore
+    __print_dataset_info("centralized", train_centralized, test_centralized)
 
     path_to_centralized = os.path.join(TRAIN_TEST_PATH, "centralized")
     if not os.path.exists(path_to_centralized):

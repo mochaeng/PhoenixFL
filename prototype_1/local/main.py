@@ -3,7 +3,9 @@ import json
 
 from local.local_helpers import get_local_loaders, get_eval_test_loader, LocalMetrics
 from pre_process.pre_process import CLIENTS_PATH, BATCH_SIZE
-from neural_helper.mlp import train, evaluate_model, MLP, DEVICE, TRAIN_CONFIG
+from neural.helpers import DEVICE, TRAIN_CONFIG
+from neural.architectures import MLP
+from neural.train_test import train, evaluate_model
 
 
 PATH_TO_SAVE = "local/metrics"
@@ -42,7 +44,12 @@ if __name__ == "__main__":
             )
 
             model = MLP().to(DEVICE)
-            logs = train(model, local_train_loader, TRAIN_CONFIG, is_epochs_logs=True)
+            logs = train(
+                net=model,
+                trainloader=local_train_loader,
+                training_style="standard",
+                train_config=TRAIN_CONFIG,
+            )
 
             local_train_logs_metrics[client_name] = logs
             local_metrics = evaluate_model(model, local_test_loader)

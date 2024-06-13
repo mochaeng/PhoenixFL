@@ -275,6 +275,7 @@ if __name__ == "__main__":
         "fedadam",
         "fedyogi",
         "fedmedian",
+        "fedtrimmed",
     ]
     strategy_metrics = {
         strategy_name: f"metrics_{strategy_name}.json"

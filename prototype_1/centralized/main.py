@@ -12,14 +12,10 @@ from pre_process.pre_process import (
     BATCH_SIZE,
     PATH_SCALER,
 )
-from neural_helper.mlp import (
-    DEVICE,
-    train,
-    evaluate_model,
-    MLP,
-    get_test_loader,
-    TRAIN_CONFIG,
-)
+from neural.train_test import train, evaluate_model
+from neural.helpers import TRAIN_CONFIG, get_test_loader, DEVICE
+from neural.architectures import MLP
+
 from centralized.centralized_helpers import (
     print_headers,
     get_centralized_data,
@@ -61,7 +57,12 @@ if __name__ == "__main__":
         print_headers(f"Centralized model training {num_model+1}")
 
         model = MLP().to(DEVICE)
-        logs = train(model, server_data["train_loader"], TRAIN_CONFIG)
+        logs = train(
+            net=model,
+            trainloader=server_data["train_loader"],
+            training_style="standard",
+            train_config=TRAIN_CONFIG,
+        )
 
         if is_save_data:
             model_scripted = torch.jit.script(model)
@@ -70,7 +71,8 @@ if __name__ == "__main__":
             )
             model_scripted.save(torch_script_file_path)  # type: ignore
 
-        train_logs[num_model] = logs
+        if logs is not None:
+            train_logs[num_model] = logs
 
         print(f"\nEvaluating {num_model+1} model among clients")
 

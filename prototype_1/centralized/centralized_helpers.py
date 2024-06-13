@@ -1,4 +1,4 @@
-from neural_helper.mlp import get_train_and_test_loaders
+from neural.helpers import get_train_and_test_loaders
 from pre_process.pre_process import (
     DATASETS_PATHS,
     get_standardized_train_test_data,

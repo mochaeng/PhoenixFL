@@ -9,7 +9,7 @@ from pre_process.pre_process import (
     get_df,
     ScalerType,
 )
-from neural_helper.mlp import get_train_and_test_loaders, get_test_loader
+from neural.helpers import get_train_and_test_loaders, get_test_loader
 
 
 class LocalMetrics:

@@ -7,7 +7,9 @@ import json
 import argparse
 
 from pre_process.pre_process import BATCH_SIZE
-from neural_helper.mlp import MLP, train, evaluate_model, DEVICE
+from neural.architectures import MLP
+from neural.train_test import train, evaluate_model
+from neural.helpers import DEVICE
 from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
@@ -18,7 +20,7 @@ from federated.federated_helpers import (
     fit_config,
     eval_config,
 )
-from federated.create_strategy import create_federated_strategy
+from federated.strategies.factory import create_federated_strategy
 
 
 class FlowerNumPyClient(fl.client.NumPyClient):
@@ -40,7 +42,19 @@ class FlowerNumPyClient(fl.client.NumPyClient):
         print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
         set_parameters(self.net, parameters)
-        train(self.net, self.train_loader, train_config=config)
+
+        if "proximal_mu" in config:
+            training_style = "fedprox"
+        else:
+            training_style = "standard"
+
+        train(
+            net=self.net,
+            trainloader=self.train_loader,
+            training_style=training_style,
+            train_config=config,
+        )
+
         return get_parameters(self.net), len(self.train_loader), {}
 
     def evaluate(self, parameters, config):
@@ -130,7 +144,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--algo",
         type=str,
-        choices=["fedprox", "fedavg", "fedadagrad", "fedadam", "fedyogi", "fedmedian"],
+        choices=[
+            "fedprox",
+            "fedavg",
+            "fedadagrad",
+            "fedadam",
+            "fedyogi",
+            "fedmedian",
+            "qfedavg",
+            "fedtrimmed",
+        ],
         help="Federeated algorithm for aggregation",
         default="fedavg",
     )
