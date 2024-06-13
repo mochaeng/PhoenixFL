@@ -48,7 +48,7 @@ if __name__ == "__main__":
         "initial_parameters": fl.common.ndarrays_to_parameters(starting_params),
         "on_fit_config_fn": fit_config,
         "on_evaluate_config_fn": eval_config,
-        "lambda_value": 0,
+        "lambda_value": 0.001,
     }
 
     strategy_name = "fedavgplus"
@@ -58,6 +58,6 @@ if __name__ == "__main__":
 
     fl.server.start_server(
         server_address="[::]:8080",
-        config=fl.server.ServerConfig(num_rounds=20),
+        config=fl.server.ServerConfig(num_rounds=10),
         strategy=strategy,  # type: ignore
     )  # type: ignore

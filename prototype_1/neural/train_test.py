@@ -247,10 +247,10 @@ def train_with_smooth_delta(
     sigma = calculate_sigma_penalty(learning_rate)
     k = calculate_regularization_degree(sigma, train_config["lr"])
 
-    model_before = copy.deepcopy(net)
+    # model_before = copy.deepcopy(net)
     initialize_local_model_for_fedplus(net, global_model, lambda_constant)
-    equality = check_models_equality(model_before, net)
-    print(f"Testing models equality: {equality}")
+    # equality = check_models_equality(model_before, net)
+    # print(f"Testing models equality: {equality}")
 
     epochs_logs = {}
 
@@ -265,29 +265,29 @@ def train_with_smooth_delta(
             loss = criterion(outputs, labels)
             loss.backward()
 
-            optimizer.step()
+            # optimizer.step()
 
-            # with torch.no_grad():
-            #     # for local_param in net.parameters():
-            #     #     update = local_param * k
-            #     #     local_param.copy_(update)
-            #     for local_param, global_param, theta_param in zip(
-            #         net.parameters(), global_model.parameters(), theta.parameters()
-            #     ):
-            #         update = (local_param * k) + (1 - k) * (global_param + theta_param)
-            #         local_param.copy_(update)
+            with torch.no_grad():
+                # for local_param in net.parameters():
+                #     update = local_param * k
+                #     local_param.copy_(update)
 
-            # with torch.no_grad():
-            #     for local_param, global_param, theta_param in zip(
-            #         net.parameters(),
-            #         global_model.parameters(),
-            #         theta_term.parameters(),
-            #     ):
-            #         optim = local_param.data - train_config["lr"] * local_param.grad
-            #         updated_param = k_regularization_degree * optim + (
-            #             1 - k_regularization_degree
-            #         ) * (global_param + theta_param)
-            #         local_param.copy_(updated_param)
+                # for local_param, global_param, theta_param in zip(
+                #     net.parameters(), global_model.parameters(), theta.parameters()
+                # ):
+                #     update = (1 - k) * (global_param + theta_param)
+                #     local_param.copy_(update)
+                ...
+
+            with torch.no_grad():
+                for local_param, global_param, theta_param in zip(
+                    net.parameters(),
+                    global_model.parameters(),
+                    theta.parameters(),
+                ):
+                    optim = local_param.data - train_config["lr"] * local_param.grad
+                    updated_param = k * optim + (1 - k) * (global_param + theta_param)
+                    local_param.copy_(updated_param)
 
             epoch_loss += loss.item() * inputs.size(0)
             total += labels.size(0)

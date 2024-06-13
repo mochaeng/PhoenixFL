@@ -14,6 +14,8 @@ from pre_process.pre_process import (
     get_prepared_data_for_loader,
     DATASETS_PATHS,
     ScalerType,
+    get_df,
+    get_standardized_data,
 )
 
 TOTAL_NUMBER_OF_CLIENTS = 4
@@ -23,7 +25,9 @@ PATH_TO_METRICS_FOLDER = "federated/metrics"
 METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "metrics.json")
 WEIGHTED_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "weighted.json")
 
-FederatedLoadersFnReturnType = Dict[int, Tuple[Tuple, Tuple[DataLoader, DataLoader]]]
+FederatedLoadersFnReturnType = Dict[
+    int, Tuple[Tuple[int, str, ScalerType], Tuple[DataLoader, DataLoader]]
+]
 MetricType = dict[str, list[list[float]]]
 
 
@@ -109,6 +113,12 @@ def get_all_federated_loaders(batch_size) -> FederatedLoadersFnReturnType:
     return loaders
 
 
-def get_centralized_loaders(batch_size):
-    test_set_path = DATASETS_PATHS["CENTRALIZED"]["TEST"]
-    # get_test_loader()
+def get_centralized_test_loader(batch_size, scaler: ScalerType):
+    train_test_path = DATASETS_PATHS["CENTRALIZED"]["TEST"]
+    test_df = get_df(train_test_path)
+
+    std_data = get_standardized_data(test_df, scaler)
+    test_data = get_prepared_data_for_loader(test_data=std_data)
+    test_loader = get_test_loader(test_data, batch_size)
+
+    return test_loader

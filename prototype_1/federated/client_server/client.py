@@ -1,11 +1,10 @@
-import torch
 import torch.nn as nn
-from torch.nn.parameter import Parameter
 import flwr as fl
 import argparse
-from typing import Iterator
 from federated.federated_helpers import FederatedMetrics
+import os
 
+from pre_process.pre_process import BATCH_SIZE
 from neural.train_test import train, evaluate_model
 from neural.helpers import DEVICE
 from neural.architectures import MLP
@@ -13,7 +12,16 @@ from federated.federated_helpers import (
     get_all_federated_loaders,
     set_parameters,
     get_parameters,
+    get_centralized_test_loader,
 )
+
+RESULTS_FOLDER_PATH = "federated/client_server/results"
+
+
+def write_results_to_file(results: str, name: str):
+    file_path = os.path.join(RESULTS_FOLDER_PATH, f"{name}.txt")
+    with open(file_path, "a+") as f:
+        f.write(results)
 
 
 def federated_evaluation_results(server_round, metrics) -> None:
@@ -29,12 +37,13 @@ def federated_evaluation_results(server_round, metrics) -> None:
 
 
 class Client(fl.client.NumPyClient):
-    def __init__(self, cid, name, train_loader, eval_loader):
+    def __init__(self, cid, name, train_loader, eval_loader, centralized_eval_loader):
         self.cid = cid
         self.name = name
         self.net: nn.Module
         self.train_loader = train_loader
         self.eval_loader = eval_loader
+        self.centralized_eval_loader = centralized_eval_loader
 
     def get_parameters(self, config):
         print(f"[Client {self.cid}] get_parameters")
@@ -72,17 +81,26 @@ class Client(fl.client.NumPyClient):
         return get_parameters(self.net), len(self.train_loader), {}
 
     def evaluate(self, parameters, config):
+        global logger
+
         print(f"\n[Client {self.cid}] evaluate, config: {config}")
 
         # set_parameters(self.net, parameters)
-        metrics = evaluate_model(self.net, self.eval_loader)
 
-        print(f"{self.name}, accuracy: {float(metrics['accuracy'])})")
+        results_str = f"\nServer round: {config['server_round']}\n"
+        results_str += "Evaluating client's model on its own testset\n"
+        own_metrics = evaluate_model(self.net, self.eval_loader)
+        results_str += f"\taccuracy: {float(own_metrics['accuracy'])})\n"
+        results_str += "Evaluating client's model on centralized testset\n"
+        centralized_metrics = evaluate_model(self.net, self.centralized_eval_loader)
+        results_str += f"\taccuracy: {float(centralized_metrics['accuracy'])})\n"
+        print(results_str)
+        write_results_to_file(results_str, self.name)
 
         return (
-            metrics["final_loss"],
+            own_metrics["final_loss"],
             len(self.eval_loader),
-            metrics,
+            own_metrics,
         )
 
 
@@ -102,12 +120,11 @@ if __name__ == "__main__":
     if cid < 0 or cid > 3:
         raise ValueError("the client id should be between 0 and 3")
 
-    LOADERS = get_all_federated_loaders(batch_size=512)
-    (_, name), (train_loader, eval_loader) = LOADERS[cid]
-
-    # centralized_eval_loader =
-
     federated_metrics = FederatedMetrics()
+
+    client_loaders = get_all_federated_loaders(BATCH_SIZE)
+    (cid, name, scaler), (train_loader, eval_loader) = client_loaders[cid]
+    centralized_test_loader = get_centralized_test_loader(BATCH_SIZE, scaler)
 
     fl.client.start_client(
         server_address="[::]:8080",
@@ -116,5 +133,6 @@ if __name__ == "__main__":
             name=name,
             train_loader=train_loader,
             eval_loader=eval_loader,
+            centralized_eval_loader=centralized_test_loader,
         ).to_client(),
     )

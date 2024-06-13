@@ -43,12 +43,11 @@ def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, Data
     return train_loader, test_loader
 
 
-def get_test_loader(data: dict, batch_size=32):
+def get_test_loader(data: dict, batch_size):
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
     y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
 
     test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
-
     test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
 
     return test_loader
@@ -74,8 +73,8 @@ def calculate_regularization_term(
         with torch.no_grad():
             diff = scaling_factor * (local_weights - global_weights)
             theta_weights.copy_(diff)
-    for value in theta.parameters():
-        print(value)
+    # for value in theta.parameters():
+    #     print(value)
     return theta
 
 
@@ -126,6 +125,6 @@ def get_optimizer(name, net, train_config):
         return torch.optim.SGD(
             net.parameters(),
             lr=train_config["lr"],
-            # momentum=train_config["momentum"],
+            momentum=train_config["momentum"],
             weight_decay=train_config["weight_decay"],
         )
