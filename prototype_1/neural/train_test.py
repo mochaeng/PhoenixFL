@@ -46,92 +46,7 @@ def train(
         case _:
             train_func = train_standard
 
-    train_func(net, trainloader, train_config)
-
-    # criterion = CRITERION()
-
-    # optimizer = get_optimizer(train_config.get("optimizer"), net, train_config)
-
-    # if "proximal_mu" in train_config:
-    #     global_params = copy.deepcopy(net).parameters()
-    # if "smooth_delta" in train_config and "aggregated_model" in train_config:
-    #     global_model: MLP = train_config["aggregated_model"]
-    #     theta_term = calculate_regularization_term(
-    #         net, global_model, train_config["smooth_delta"]
-    #     )
-    #     sigma_penalty = calculate_sigma_penalty(
-    #         constraint_value=0.9, learning_rate=train_config["lr"]
-    #     )
-    #     k_regularization_degree = calculate_regularization_degree(
-    #         sigma_penalty, train_config["lr"]
-    #     )
-
-    # epochs_logs = {}
-
-    # net.train()
-    # for epoch in range(train_config["epochs"]):
-    #     correct, total, epoch_loss = 0, 0, 0.0
-    #     for batch_idx, (inputs, labels) in enumerate(trainloader):
-    #         inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-
-    #         if "smooth_delta" in train_config:
-    #             net.zero_grad()
-    #         else:
-    #             optimizer.zero_grad()
-
-    #         outputs = net(inputs)
-
-    #         if "proximal_mu" in train_config:
-    #             proximal_term = calculate_proximal_term(net, global_params)
-    #             loss = (
-    #                 criterion(outputs, labels)
-    #                 + (train_config["proximal_mu"] / 2) * proximal_term
-    #             )
-    #         else:
-    #             loss = criterion(outputs, labels)
-
-    #         loss.backward()
-
-    #         if "smooth_delta" in train_config:
-    #             # optimizer.step()
-    #             with torch.no_grad():
-    #                 for local_param, global_param, theta_param in zip(
-    #                     net.parameters(),
-    #                     global_model.parameters(),
-    #                     theta_term.parameters(),
-    #                 ):
-    #                     optim = local_param.data - train_config["lr"] * local_param.grad
-    #                     # updated_param = (k_regularization_degree * optim) + (
-    #                     #     1 - k_regularization_degree
-    #                     # ) * (global_param + theta_param)
-    #                     updated_param = optim
-    #                     local_param.copy_(updated_param)
-    #         else:
-    #             optimizer.step()
-
-    #         # for (
-    #         #     v1,
-    #         #     v2,
-    #         # ) in zip(updated_param, local_param):
-    #         #     updated_param.equal(local_param)
-
-    #         epoch_loss += loss.item() * inputs.size(0)
-    #         total += labels.size(0)
-    #         round_outputs = torch.round(torch.sigmoid(outputs))
-    #         correct += (round_outputs == labels).sum().item()
-
-    #     epoch_loss /= len(trainloader.dataset)  # type: ignore
-    #     epoch_acc = correct / total
-    #     epochs_logs[f"epoch_{epoch}"] = {
-    #         "loss": float(epoch_loss),
-    #         # "acc": float(epoch_acc),
-    #     }
-
-    #     if is_verbose:
-    #         print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
-
-    # if is_epochs_logs:
-    #     return epochs_logs
+    return train_func(net, trainloader, train_config)
 
 
 def train_standard(
@@ -243,14 +158,12 @@ def train_with_smooth_delta(
     delta = train_config["smooth_delta"]
     lambda_constant = train_config["lambda"]
 
-    theta = calculate_regularization_term(net, global_model, delta)
     sigma = calculate_sigma_penalty(learning_rate)
     k = calculate_regularization_degree(sigma, train_config["lr"])
-
-    # model_before = copy.deepcopy(net)
-    initialize_local_model_for_fedplus(net, global_model, lambda_constant)
-    # equality = check_models_equality(model_before, net)
-    # print(f"Testing models equality: {equality}")
+    theta = calculate_regularization_term(net, global_model, delta)
+    initialize_local_model_for_fedplus(
+        net.parameters(), global_model.parameters(), lambda_constant
+    )
 
     epochs_logs = {}
 
@@ -260,34 +173,31 @@ def train_with_smooth_delta(
         for batch_idx, (inputs, labels) in enumerate(trainloader):
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
 
-            net.zero_grad()
+            optimizer.zero_grad()
+            # net.zero_grad()
+
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
 
-            # optimizer.step()
-
-            with torch.no_grad():
-                # for local_param in net.parameters():
-                #     update = local_param * k
-                #     local_param.copy_(update)
-
-                # for local_param, global_param, theta_param in zip(
-                #     net.parameters(), global_model.parameters(), theta.parameters()
-                # ):
-                #     update = (1 - k) * (global_param + theta_param)
-                #     local_param.copy_(update)
-                ...
+            optimizer.step()
 
             with torch.no_grad():
                 for local_param, global_param, theta_param in zip(
-                    net.parameters(),
-                    global_model.parameters(),
-                    theta.parameters(),
+                    net.parameters(), global_model.parameters(), theta.parameters()
                 ):
-                    optim = local_param.data - train_config["lr"] * local_param.grad
-                    updated_param = k * optim + (1 - k) * (global_param + theta_param)
-                    local_param.copy_(updated_param)
+                    update = k * local_param + (1 - k) * (global_param + theta_param)
+                    local_param.copy_(update)
+
+            # with torch.no_grad():
+            #     for local_param, global_param, theta_param in zip(
+            #         net.parameters(),
+            #         global_model.parameters(),
+            #         theta.parameters(),
+            #     ):
+            #         # optim = local_param.data - train_config["lr"] * local_param.grad
+            #         # updated_param = (k * optim) + (1 - k) * (global_param + theta_param)
+            #         # local_param.copy_(updated_param)
 
             epoch_loss += loss.item() * inputs.size(0)
             total += labels.size(0)

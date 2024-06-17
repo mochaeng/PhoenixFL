@@ -20,8 +20,8 @@ CRITERION = torch.nn.BCEWithLogitsLoss
 TRAIN_CONFIG = {
     "epochs": 10,
     "lr": 0.0001,
-    "momentum": 0.99,
-    "weight_decay": 0.0001,
+    "momentum": 0.9,
+    "weight_decay": 0.1,
     "optimizer": "adam",
     "is_verbose": True,
     "is_epochs_logs": True,
@@ -73,8 +73,6 @@ def calculate_regularization_term(
         with torch.no_grad():
             diff = scaling_factor * (local_weights - global_weights)
             theta_weights.copy_(diff)
-    # for value in theta.parameters():
-    #     print(value)
     return theta
 
 
@@ -86,17 +84,15 @@ def check_models_equality(model1: nn.Module, model2: nn.Module) -> bool:
 
 
 def initialize_local_model_for_fedplus(
-    local_params: nn.Module,
-    global_params: nn.Module,
+    local_params: Iterator[nn.Parameter],
+    global_params: Iterator[nn.Parameter],
     lambda_value: float,
 ):
     with torch.no_grad():
-        for local_param, global_param in zip(
-            local_params.parameters(), global_params.parameters()
-        ):
-            updated_param = (
-                1 - lambda_value
-            ) * local_param + lambda_value * global_param
+        for local_param, global_param in zip(local_params, global_params):
+            updated_param = (1 - lambda_value) * local_param + (
+                lambda_value * global_param
+            )
             local_param.copy_(updated_param)
 
 

@@ -273,6 +273,35 @@ class FedAdamWithFederatedEvaluation(fl.server.strategy.FedAdam):
 
         return super().aggregate_evaluate(server_round, results, failures)
 
+    @override
+    def configure_fit(
+        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+    ) -> List[Tuple[ClientProxy, FitIns]]:
+        """Configure the next round of training
+
+        Sends tau, eta and eta_l constants for fedadam
+        """
+
+        # Get the standard client/config pairs from the FedAvg super-class
+        client_config_pairs = super().configure_fit(
+            server_round, parameters, client_manager
+        )
+
+        # Return client/config pairs with the delta added
+        return [
+            (
+                client,
+                FitIns(
+                    fit_ins.parameters,
+                    {
+                        **fit_ins.config,
+                        "eta_l": self.eta_l,
+                    },
+                ),
+            )
+            for client, fit_ins in client_config_pairs
+        ]
+
 
 class FedYogiWithFederatedEvaluation(fl.server.strategy.FedYogi):
     def __init__(

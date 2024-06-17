@@ -36,17 +36,25 @@ class FlowerNumPyClient(fl.client.NumPyClient):
         return get_parameters(self.net)
 
     def fit(self, parameters, config):
-        server_round = config["server_round"]
+        server_round = int(config["server_round"])
         del config["server_round"]
 
-        print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
-
         set_parameters(self.net, parameters)
+
+        # if server_round >= 1 and server_round <= 3:
+        #     config["epochs"] = 5
+        # else:
+        #     config["epochs"] = 8
+
+        if "eta_l" in config:
+            config["lr"] = config["eta_l"]
 
         if "proximal_mu" in config:
             training_style = "fedprox"
         else:
             training_style = "standard"
+
+        print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
         train(
             net=self.net,
@@ -74,7 +82,7 @@ class FlowerNumPyClient(fl.client.NumPyClient):
 
 def client_fn(cid: str):
     idx = int(cid) % len(LOADERS)
-    (cid_, name), (train_loader, eval_loader) = LOADERS[idx]
+    (cid_, name, _), (train_loader, eval_loader) = LOADERS[idx]
 
     model = MLP().to(DEVICE)
 
@@ -93,7 +101,7 @@ def federated_evaluation_results(server_round, metrics) -> None:
 
     for cid, results in metrics:
         idx = cid % len(LOADERS)
-        (cid_, name), _ = LOADERS[idx]
+        (cid_, name, _), _ = LOADERS[idx]
         assert cid_ == cid
 
         del results["final_loss"]
@@ -163,6 +171,24 @@ if __name__ == "__main__":
         help="Value for proximal_mu",
         default=1.0,
     )
+    parser.add_argument(
+        "--tau",
+        type=float,
+        help="Value for tau (fedadam, fedadagrad and fedyogi)",
+        default=1e-9,
+    )
+    parser.add_argument(
+        "--eta",
+        type=float,
+        help="Value for eta (fedadam, fedadagrad and fedyogi)",
+        default=1e-2,
+    )
+    parser.add_argument(
+        "--eta_l",
+        type=float,
+        help="Value for eta_l (fedadam, fedadagrad and fedyogi)",
+        default=1e-2,
+    )
 
     args = parser.parse_args()
     num_rounds = args.num_rounds
@@ -172,6 +198,9 @@ if __name__ == "__main__":
     strategy_name = args.algo
     proximal_mu = args.mu
     num_models = args.num_models
+    tau = args.tau
+    eta = args.eta
+    eta_l = args.eta_l
 
     if num_models <= 0:
         raise ValueError(
@@ -204,6 +233,15 @@ if __name__ == "__main__":
 
     if strategy_name == "fedprox" and proximal_mu is not None:
         strategy_config["proximal_mu"] = proximal_mu
+
+    if (
+        strategy_name == "fedadam"
+        or strategy_name == "fedyogi"
+        or strategy_name == "fedadagrad"
+    ):
+        strategy_config["tau"] = tau
+        strategy_config["eta"] = eta
+        strategy_config["eta_l"] = eta_l
 
     strategy = create_federated_strategy(
         strategy_name, **strategy_config

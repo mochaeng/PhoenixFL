@@ -10,14 +10,13 @@ import os
 
 
 PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
-# PATH_SCALER = "prototype_1/centralized/models/scaler_centralized_model.pkl"
 PATH_SCALER = "datasets/data-for-prototype-02/"
 
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
 COLUMNS_TO_REMOVE = [
-    # "IPV4_SRC_ADDR",
-    # "IPV4_DST_ADDR",
-    # "L4_SRC_PORT",
+    "IPV4_SRC_ADDR",
+    "IPV4_DST_ADDR",
+    "L4_SRC_PORT",
     # "L4_DST_PORT",
     "Attack",
 ]
@@ -56,14 +55,13 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler]
 DataType = Union[np.ndarray, spmatrix]
 
-BATCH_SIZE = 1024
+BATCH_SIZE = 512
 
 
 def get_df(path: str) -> pd.DataFrame:
     df = (
-        pd.read_parquet(path, engine="pyarrow")
-        .drop(columns=COLUMNS_TO_REMOVE)
-        .drop_duplicates()
+        pd.read_parquet(path, engine="pyarrow").drop(columns=COLUMNS_TO_REMOVE)
+        # .drop_duplicates()
     )
     return df
 

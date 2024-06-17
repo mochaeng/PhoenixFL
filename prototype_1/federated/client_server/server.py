@@ -1,10 +1,9 @@
 import flwr as fl
 from flwr.common import Metrics, Scalar
 from typing import List, Tuple
+import argparse
 
-from federated.federated_helpers import (
-    get_parameters,
-)
+from federated.federated_helpers import get_parameters
 from neural.helpers import TRAIN_CONFIG, DEVICE
 from neural.architectures import MLP
 from federated.strategies.factory import create_federated_strategy
@@ -35,9 +34,24 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Starting up a Federated Learning Server"
+    )
+    parser.add_argument(
+        "--num-clients",
+        type=int,
+        help="The number of clients the server should wait to start the training process",
+        default=1,
+    )
+
+    args = parser.parse_args()
+    num_clients = args.num_clients
+
+    if num_clients < 1 or num_clients > 4:
+        raise ValueError("the number of clients should be between [1..4]")
+
     starting_params = get_parameters(MLP().to(DEVICE))
 
-    num_clients = 4
     strategy_config = {
         "fraction_fit": 1.0,
         "fraction_evaluate": 1.0,
@@ -48,7 +62,7 @@ if __name__ == "__main__":
         "initial_parameters": fl.common.ndarrays_to_parameters(starting_params),
         "on_fit_config_fn": fit_config,
         "on_evaluate_config_fn": eval_config,
-        "lambda_value": 0.001,
+        "lambda_value": 0,
     }
 
     strategy_name = "fedavgplus"
