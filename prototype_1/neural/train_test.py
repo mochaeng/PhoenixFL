@@ -235,9 +235,24 @@ def evaluate_model(net: nn.Module, testloader) -> Dict[str, float]:
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
 
             outputs = net(inputs)
-            predicted = torch.round(torch.sigmoid(outputs.data))
 
-            val_loss += criterion(outputs, labels).item() * labels.size(0)
+            loss = criterion(outputs, labels)
+            # if not torch.isnan(loss):
+            val_loss += loss.item() * inputs.size(0)
+            # else:
+            #     print(f"Inputs range: {inputs.min().item()} to {inputs.max().item()}")
+            #     print(f"Labels range: {labels.min().item()} to {labels.max().item()}")
+            #     print(
+            #         f"Outputs range: {outputs.min().item()} to {outputs.max().item()}"
+            #     )
+            #     print(f"loss: {loss}")
+
+            # print(f"Inputs range: {inputs.min().item()} to {inputs.max().item()}")
+            # print(f"Labels range: {labels.min().item()} to {labels.max().item()}")
+            # print(f"Outputs range: {outputs.min().item()} to {outputs.max().item()}")
+
+            predicted = torch.round(torch.sigmoid(outputs.data))
+            # print(f"loss: {val_loss}")
 
             labels = labels.bool()
             predicted = predicted.view(-1)

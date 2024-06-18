@@ -7,7 +7,7 @@ import torch
 from pre_process.pre_process import (
     CLIENTS_PATH,
     get_df,
-    get_standardized_data,
+    get_standardized_df,
     get_prepared_data_for_loader,
     BATCH_SIZE,
     PATH_SCALER,
@@ -78,11 +78,11 @@ if __name__ == "__main__":
 
         for client_name, dataset_path in CLIENTS_PATH:
             client_test_df = get_df(dataset_path["TEST"])
-            client_test_data = get_standardized_data(
+            client_test_df_scaled = get_standardized_df(
                 client_test_df, server_data["scaler"]
             )
 
-            data = get_prepared_data_for_loader(test_data=client_test_data)
+            data = get_prepared_data_for_loader(test_df=client_test_df_scaled)
             test_loader = get_test_loader(data, BATCH_SIZE)
 
             evaluated_metrics = evaluate_model(model, test_loader)

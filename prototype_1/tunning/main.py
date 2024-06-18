@@ -6,7 +6,7 @@ import os
 
 from tunning.helpers import CENTRALIZED_DATASET_PATH, PopoolaMLP, PATH_TO_SAVE_RESULTS
 from pre_process.pre_process import (
-    get_standardized_data,
+    get_standardized_df,
     get_df,
     get_fit_scaler_from_df,
 )
@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     train_df = get_df(CENTRALIZED_DATASET_PATH).sample(frac=0.1)
     scaler = get_fit_scaler_from_df(train_df)
-    data = get_standardized_data(train_df, scaler)
+    data = get_standardized_df(train_df, scaler)
 
     X = torch.tensor(data["x"], dtype=torch.float32)
     y = torch.tensor(data["y"], dtype=torch.float32).view(-1, 1).squeeze()

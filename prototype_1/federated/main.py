@@ -9,7 +9,7 @@ import argparse
 from pre_process.pre_process import BATCH_SIZE
 from neural.architectures import MLP
 from neural.train_test import train, evaluate_model
-from neural.helpers import DEVICE
+from neural.helpers import DEVICE, TRAIN_CONFIG
 from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
@@ -72,7 +72,6 @@ class FlowerNumPyClient(fl.client.NumPyClient):
         metrics = evaluate_model(self.net, self.eval_loader)
 
         print(f"{self.name}, accuracy: {float(metrics['accuracy'])})")
-
         return (
             metrics["final_loss"],
             len(self.eval_loader),
@@ -104,7 +103,7 @@ def federated_evaluation_results(server_round, metrics) -> None:
         (cid_, name, _), _ = LOADERS[idx]
         assert cid_ == cid
 
-        del results["final_loss"]
+        # del results["final_loss"]
         federated_metrics.add_client_evaluated_results(name, results)
 
 
@@ -261,12 +260,6 @@ if __name__ == "__main__":
             client_resources=clients_resources,
         )
 
-        # # self.losses_distributed: List[Tuple[int, float]] = []
-        # # self.losses_centralized: List[Tuple[int, float]] = []
-        # # self.metrics_distributed_fit: Dict[str, List[Tuple[int, Scalar]]] = {}
-        # # self.metrics_distributed: Dict[str, List[Tuple[int, Scalar]]] = {}
-        # # self.metrics_centralized: Dict[str, List[Tuple[int, Scalar]]] = {}
-
         weighted_metrics = {
             "metrics_distributed": history.metrics_distributed,
             "losses_distributed": history.losses_distributed,
@@ -280,7 +273,8 @@ if __name__ == "__main__":
 
     if is_save_results:
         file_path = os.path.join(
-            PATH_TO_METRICS_FOLDER, f"metrics_{strategy_name}.json"
+            PATH_TO_METRICS_FOLDER,
+            f"metrics_{strategy_name}.json",
         )
         with open(file_path, "w+") as f:
             json.dump(federated_metrics.get_metrics(), f, indent=4)

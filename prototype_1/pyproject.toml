@@ -19,6 +19,7 @@ skorch = "^0.15.0"
 result = "^0.16.1"
 dask = {extras = ["dataframe"], version = "^2024.5.2"}
 overrides = "^7.7.0"
+ipykernel = "^6.29.4"
 
 
 [build-system]

@@ -222,12 +222,12 @@ def get_metrics_from_all_strategies(strategy_metrics_files: dict) -> dict:
     return metrics
 
 
-def get_metric_versus_rounds_with_strategieschart(
+def get_strategies_metrics_by_rounds_chart(
     desired_metric: str, strategy_metrics_files: dict
 ) -> Figure:
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     axs = axs.flatten()
-    chart_letter = "a"
+    # chart_letter = "a"
 
     strategies_metrics = get_metrics_from_all_strategies(strategy_metrics_files)
 
@@ -267,6 +267,28 @@ def get_metric_versus_rounds_with_strategieschart(
     return fig
 
 
+def get_fedprox_losses_with_epochs():
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+    axs = axs.flatten()
+
+    metrics = {}
+    figures: list[Figure] = []
+    path = os.path.join(METRICS_PATH, "fedprox")
+    for file_name in os.listdir(path):
+        _, epochs, mu = file_name.split("_")
+
+        match read_file_as_dict(path, file_name):
+            case Ok(metrics_values):
+                del metrics_values["weighted_metrics"]
+                metrics[f"{epochs}_{mu}"] = metrics_values
+            case Err(_):
+                print("DISGRACE")
+
+    print(metrics)
+
+    return figures
+
+
 if __name__ == "__main__":
     strategies_names = [
         "fedavg",
@@ -277,10 +299,18 @@ if __name__ == "__main__":
         "fedmedian",
         "fedtrimmed",
     ]
+
     strategy_metrics = {
         strategy_name: f"metrics_{strategy_name}.json"
         for strategy_name in strategies_names
     }
 
-    figure = get_metric_versus_rounds_with_strategieschart("accuracy", strategy_metrics)
-    figure.savefig(os.path.join(CHARTS_PATH, "metric_versus_rounds.png"))
+    metrics_figure = get_strategies_metrics_by_rounds_chart(
+        "accuracy", strategy_metrics
+    )
+    metrics_figure.savefig(os.path.join(CHARTS_PATH, "metric_versus_rounds.png"))
+    # print(strategy_metrics)
+
+    # losses_figure = get_fedprox_losses_with_epochs()
+    # [figure.savefig(os.path.join(CHARTS_PATH, "")) for figure in losses_figure]
+    # print(losses_figure)

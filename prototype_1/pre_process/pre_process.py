@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from scipy.sparse import spmatrix
 import joblib
 from typing import Dict, List, Tuple, Union
@@ -14,9 +14,9 @@ PATH_SCALER = "datasets/data-for-prototype-02/"
 
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
 COLUMNS_TO_REMOVE = [
-    "IPV4_SRC_ADDR",
-    "IPV4_DST_ADDR",
-    "L4_SRC_PORT",
+    # "IPV4_SRC_ADDR",
+    # "IPV4_DST_ADDR",
+    # "L4_SRC_PORT",
     # "L4_DST_PORT",
     "Attack",
 ]
@@ -52,8 +52,8 @@ CLIENTS_PATH: List[Tuple[str, Dict]] = [
 ]
 
 SCALER = MinMaxScaler
-ScalerType = Union[MinMaxScaler, StandardScaler]
-DataType = Union[np.ndarray, spmatrix]
+ScalerType = Union[MinMaxScaler, StandardScaler, RobustScaler]
+DataType = np.ndarray
 
 BATCH_SIZE = 512
 
@@ -63,6 +63,7 @@ def get_df(path: str) -> pd.DataFrame:
         pd.read_parquet(path, engine="pyarrow").drop(columns=COLUMNS_TO_REMOVE)
         # .drop_duplicates()
     )
+    print(f"Duplicates: {df.duplicated().sum()}")
     return df
 
 
@@ -72,58 +73,41 @@ def get_train_and_test_dfs(paths: Dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return train_df, test_df
 
 
-def get_x_y_data(df: pd.DataFrame) -> Dict[str, DataType]:
-    x = df.iloc[:, :-1].values
-    y = df.iloc[:, -1:].values
-    return {
-        "x": x,
-        "y": y,
-    }
+def get_standardized_df(df: pd.DataFrame, scaler: ScalerType) -> pd.DataFrame:
+    x_scaled = scaler.transform(df)
+    df_scaled = pd.DataFrame(x_scaled, columns=df.columns, index=df.index)  # type: ignore
+    return df_scaled
 
 
-def get_standardized_data(df: pd.DataFrame, scaler: ScalerType) -> Dict[str, DataType]:
-    data = get_x_y_data(df)
-    data["x"] = scaler.transform(data["x"])
-    return data
-
-
-def get_fit_scaler_from_df(df: pd.DataFrame):
+def get_fit_scaler_from_df(df: pd.DataFrame, path_to_save: str):
     scaler = SCALER()
-    data = get_x_y_data(df)
-    scaler.fit(data["x"])
-    return scaler
-
-
-def get_fit_scaler_from_data(
-    data: Dict[str, DataType], path_to_save=None
-) -> ScalerType:
-    scaler = SCALER()
-    scaler.fit(data["x"])
-    if path_to_save is not None:
-        joblib.dump(scaler, PATH_SCALER)
+    scaler = scaler.fit(df)
     return scaler
 
 
 def get_standardized_train_test_data(
-    train_df: pd.DataFrame, test_df: pd.DataFrame, path_to_save=None
-) -> Tuple[Tuple[Dict[str, DataType], Dict[str, DataType]], ScalerType]:
-    train_data = get_x_y_data(train_df)
-    test_data = get_x_y_data(test_df)
+    train_df: pd.DataFrame, test_df: pd.DataFrame, path_to_save=""
+) -> Tuple[Tuple[pd.DataFrame, pd.DataFrame], ScalerType]:
+    scaler = get_fit_scaler_from_df(train_df, path_to_save)
+    train_df_scaled = get_standardized_df(train_df, scaler)
+    test_df_scaled = get_standardized_df(test_df, scaler)
 
-    scaler = get_fit_scaler_from_data(train_data, path_to_save)
-
-    train_data["x"] = scaler.transform(train_data["x"])
-    test_data["x"] = scaler.transform(test_data["x"])
-
-    return (train_data, test_data), scaler
+    return (train_df_scaled, test_df_scaled), scaler
 
 
-def get_prepared_data_for_loader(train_data=None, test_data=None):
+def get_prepared_data_for_loader(
+    train_df: Union[pd.DataFrame, None] = None,
+    test_df: Union[pd.DataFrame, None] = None,
+):
     data = {}
-    if train_data:
-        data.update({"x_train": train_data["x"], "y_train": train_data["y"]})
-    if test_data:
-        data.update({"x_test": test_data["x"], "y_test": test_data["y"]})
+    if train_df is not None:
+        x = train_df.iloc[:, :-1].values
+        y = train_df.iloc[:, -1:].values
+        data.update({"x_train": x, "y_train": y})
+    if test_df is not None:
+        x = test_df.iloc[:, :-1].values
+        y = test_df.iloc[:, -1:].values
+        data.update({"x_test": x, "y_test": y})
     return data
 
 

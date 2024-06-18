@@ -5,7 +5,7 @@ from pre_process.pre_process import (
     get_train_and_test_dfs,
     get_standardized_train_test_data,
     get_prepared_data_for_loader,
-    get_standardized_data,
+    get_standardized_df,
     get_df,
     ScalerType,
 )
@@ -48,10 +48,13 @@ def get_local_loaders(
     paths: Dict, batch_size=32
 ) -> Tuple[Tuple[DataLoader, DataLoader], ScalerType]:
     train_df, test_df = get_train_and_test_dfs(paths)
-    (train_data, test_data), scaler = get_standardized_train_test_data(
+
+    (scaled_train_df, scaled_test_df), scaler = get_standardized_train_test_data(
         train_df, test_df
     )
-    data = get_prepared_data_for_loader(train_data=train_data, test_data=test_data)
+    data = get_prepared_data_for_loader(
+        train_df=scaled_train_df, test_df=scaled_test_df
+    )
     train_loader, test_loader = get_train_and_test_loaders(data, batch_size)
 
     return (train_loader, test_loader), scaler
@@ -59,7 +62,8 @@ def get_local_loaders(
 
 def get_eval_test_loader(path: str, scaler: ScalerType, batch_size: int):
     df = get_df(path)
-    test_data = get_standardized_data(df, scaler)
-    data = get_prepared_data_for_loader(test_data=test_data)
+    scaled_df = get_standardized_df(df, scaler=scaler)
+    data = get_prepared_data_for_loader(test_df=scaled_df)
     test_loader = get_test_loader(data, batch_size)
+
     return test_loader

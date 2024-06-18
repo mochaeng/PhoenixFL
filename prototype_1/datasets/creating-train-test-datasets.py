@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 import os
 import argparse
 import dask.dataframe as dd
+import matplotlib.pyplot as plt
 
 
 COLUMNS_TO_REMOVE = [
@@ -12,6 +13,27 @@ COLUMNS_TO_REMOVE = [
     "L4_SRC_PORT",
     # "L4_DST_PORT",
 ]
+
+CHARTS_PATH = "datasets/charts"
+
+
+def remove_outliers(client_name: str, df_train: pd.DataFrame, df_test: pd.DataFrame):
+    columns = ["DST_TO_SRC_SECOND_BYTES", "SRC_TO_DST_SECOND_BYTES"]
+
+    print(f"train before: {df_train.value_counts().sum()}")
+    print(f"test before: {df_test.value_counts().sum()}")
+
+    for column in columns:
+        q_train = df_train[column].quantile(0.999)
+        q_test = df_test[column].quantile(0.999)
+
+        df_train = df_train[df_train[column] < q_train]
+        df_test = df_test[df_test[column] < q_test]
+
+    print(f"train after: {df_train.value_counts().sum()}")
+    print(f"test after: {df_test.value_counts().sum()}")
+
+    return df_train, df_test
 
 
 def __print_dataset_info(client_name, df_train, df_test):
@@ -52,16 +74,17 @@ def get_duplicates_in_df(df: pd.DataFrame):
 #     return dict(zip(result.index.tolist(), result.values))
 
 
-def get_df(x, y, columns, distribution_name: str, extension):
+def get_df(x, y, columns, extension):
     df = pd.DataFrame(data=x, columns=columns)
 
     if extension == "parquet":
         df["Attack"] = np.squeeze(y)
 
-    train_distribution = (
-        f"{distribution_name}\n{df['Attack'].value_counts().to_string()}"
-    )
-    return df, train_distribution
+    return df
+
+
+def get_distribution(df: pd.DataFrame, distribution_name: str):
+    return f"{distribution_name}\n{df['Attack'].value_counts().to_string()}"
 
 
 def get_paths(file_extension):
@@ -153,12 +176,13 @@ if __name__ == "__main__":
 
         columns = df.columns.delete(-1)
 
-        df_train, train_distribution = get_df(
-            x_train, y_train, columns, "train", file_extension
-        )
-        df_test, test_distribution = get_df(
-            x_test, y_test, columns, "test", file_extension
-        )
+        df_train = get_df(x_train, y_train, columns, file_extension)
+        df_test = get_df(x_test, y_test, columns, file_extension)
+
+        df_train, df_test = remove_outliers(client_name, df_train, df_test)
+
+        train_distribution = get_distribution(df_train, "train")
+        test_distribution = get_distribution(df_train, "test")
 
         __print_dataset_info(client_name, df_train, df_test)
 

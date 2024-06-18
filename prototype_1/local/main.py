@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
             local_train_logs_metrics[client_name] = logs
             local_metrics = evaluate_model(model, local_test_loader)
-            del local_metrics["final_loss"]
+            # del local_metrics["final_loss"]
 
             metrics.add_client_model_values(model_name, client_name, local_metrics)
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                 )
 
                 eval_metrics = evaluate_model(model, eval_test_loader)
-                del eval_metrics["final_loss"]
+                # del eval_metrics["final_loss"]
 
                 metrics.add_client_model_values(
                     model_name, eval_client_name, eval_metrics
