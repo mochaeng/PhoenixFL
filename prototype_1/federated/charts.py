@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.figure import Figure
 from result import Ok, Err
+import argparse
+import re
 
 from pre_process.pre_process import CLIENTS_NAMES, read_file_as_dict
 
@@ -267,48 +269,128 @@ def get_strategies_metrics_by_rounds_chart(
     return fig
 
 
-def get_fedprox_losses_with_epochs():
+def get_approaches_losses_with_epochs(approach: str) -> Tuple[Figure, str]:
+    def fedprox_line_parser(file_name: str):
+        _, epochs, mu = file_name.split("_")
+        return
+
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     axs = axs.flatten()
 
     metrics = {}
-    figures: list[Figure] = []
-    path = os.path.join(METRICS_PATH, "fedprox")
+    path = os.path.join(METRICS_PATH, approach)
+    if not os.path.exists(path):
+        raise ValueError(f"No folder found for the approach {approach}")
+
     for file_name in os.listdir(path):
-        _, epochs, mu = file_name.split("_")
+        keys = re.split(r"[_.]", file_name)
+        key = "_".join(keys[1:-1])
 
         match read_file_as_dict(path, file_name):
             case Ok(metrics_values):
                 del metrics_values["weighted_metrics"]
-                metrics[f"{epochs}_{mu}"] = metrics_values
+                metrics[key] = metrics_values
             case Err(_):
-                print("DISGRACE")
+                raise ValueError("Could not load file")
 
-    print(metrics)
+    for key, metrics_data in metrics.items():
+        for client_name, client_data in metrics_data.items():
+            for metric_name, values in client_data.items():
+                if metric_name != "final_loss":
+                    continue
+                print(client_name)
 
-    return figures
+                losses = values[0]
+                rounds = len(losses)
 
+                x = range(1, rounds + 1)
+                y = losses
+
+                match approach:
+                    case "fedprox":
+                        epochs, mu = key.split("_")
+                        label = f"epochs = {epochs}, mu = {mu}"
+                    case "fedavg":
+                        epochs = key.split("_")
+                        label = f"epochs = {epochs[0]}"
+
+                client_idx = int(client_name.split(":")[0].split("-")[1]) - 1
+                axs[client_idx].plot(x, y, label=label)
+                axs[client_idx].set(title=client_name)
+                axs[client_idx].xaxis.set_major_locator(
+                    mticker.MaxNLocator(integer=True)
+                )
+                axs[client_idx].set_xlabel("Communication rounds", linespacing=1.5)
+                axs[client_idx].set_ylabel("Epoch loss")
+
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    lines = [lines[0], lines[1], lines[2]]
+    fig.legend(
+        lines,
+        labels,
+        loc="upper right",
+        bbox_to_anchor=(1, 1.00),
+        ncol=4,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+
+    file_name_to_return = f"{approach}_losses.png"
+    return fig, file_name_to_return
+
+
+strategies_names = [
+    "fedavg",
+    "fedprox",
+    "fedadagrad",
+    "fedadam",
+    "fedyogi",
+    "fedmedian",
+    "fedtrimmed",
+]
 
 if __name__ == "__main__":
-    strategies_names = [
-        "fedavg",
-        "fedprox",
-        "fedadagrad",
-        "fedadam",
-        "fedyogi",
-        "fedmedian",
-        "fedtrimmed",
-    ]
-
-    strategy_metrics = {
-        strategy_name: f"metrics_{strategy_name}.json"
-        for strategy_name in strategies_names
-    }
-
-    metrics_figure = get_strategies_metrics_by_rounds_chart(
-        "accuracy", strategy_metrics
+    parser = argparse.ArgumentParser(
+        description="Creating charts for federated learning approach"
     )
-    metrics_figure.savefig(os.path.join(CHARTS_PATH, "metric_versus_rounds.png"))
+    parser.add_argument(
+        "--style",
+        type=str,
+        help="The style of charts method you want to make",
+        choices=["loss", "metrics"],
+        required=True,
+    )
+    parser.add_argument(
+        "--approach",
+        type=str,
+        help="The name the approach e.g., fedavg, fedprox",
+        choices=strategies_names.copy().append("all"),
+        required=True,
+    )
+
+    args = parser.parse_args()
+    style = args.style
+    approach = args.approach
+
+    match style:
+        case "loss":
+            if approach == "all":
+                raise ValueError("the loss graphs should be for a single approach")
+            figure, file_name = get_approaches_losses_with_epochs(approach)
+        case "metrics":
+            ...
+
+    path = os.path.join(CHARTS_PATH, file_name)
+    figure.savefig(path)
+    # strategy_metrics = {
+    #     strategy_name: f"metrics_{strategy_name}.json"
+    #     for strategy_name in strategies_names
+    # }
+
+    # metrics_figure = get_strategies_metrics_by_rounds_chart(
+    #     "accuracy", strategy_metrics
+    # )
+    # metrics_figure.savefig(os.path.join(CHARTS_PATH, "metric_versus_rounds.png"))
     # print(strategy_metrics)
 
     # losses_figure = get_fedprox_losses_with_epochs()
