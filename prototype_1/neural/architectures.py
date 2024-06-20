@@ -4,8 +4,8 @@ import torch.nn as nn
 class MLP(nn.Module):
     def __init__(
         self,
-        input_layer_size: int = 40,
-        hidden_layers_size: list[int] = [128] * 2,
+        input_layer_size: int = 39,
+        hidden_layers_size: list[int] = [39, 21, 12],
         output_layer_size: int = 1,
         dropout_prob: float = 0.3,
     ) -> None:

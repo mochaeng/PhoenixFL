@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import scipy.stats
 from sklearn.model_selection import train_test_split
+import scipy
 import os
 import argparse
 import dask.dataframe as dd
@@ -8,32 +10,13 @@ import matplotlib.pyplot as plt
 
 
 COLUMNS_TO_REMOVE = [
-    "IPV4_SRC_ADDR",
-    "IPV4_DST_ADDR",
-    "L4_SRC_PORT",
+    # "IPV4_SRC_ADDR",
+    # "IPV4_DST_ADDR",
+    # "L4_SRC_PORT",
     # "L4_DST_PORT",
 ]
 
 CHARTS_PATH = "datasets/charts"
-
-
-def remove_outliers(client_name: str, df_train: pd.DataFrame, df_test: pd.DataFrame):
-    columns = ["DST_TO_SRC_SECOND_BYTES", "SRC_TO_DST_SECOND_BYTES"]
-
-    print(f"train before: {df_train.value_counts().sum()}")
-    print(f"test before: {df_test.value_counts().sum()}")
-
-    for column in columns:
-        q_train = df_train[column].quantile(0.999)
-        q_test = df_test[column].quantile(0.999)
-
-        df_train = df_train[df_train[column] < q_train]
-        df_test = df_test[df_test[column] < q_test]
-
-    print(f"train after: {df_train.value_counts().sum()}")
-    print(f"test after: {df_test.value_counts().sum()}")
-
-    return df_train, df_test
 
 
 def __print_dataset_info(client_name, df_train, df_test):
@@ -43,17 +26,17 @@ def __print_dataset_info(client_name, df_train, df_test):
     print(
         f"Train duplicates [no-attack]: {df_train.drop(columns=['Attack']).duplicated().sum()}"
     )
-    print(f"Classes: {get_duplicates_in_df(df_train)}\n")  # type: ignore
+    print(f"Classes: {get_duplicates_in_df_after_remove_attack_column(df_train)}\n")  # type: ignore
 
     print(f"Test duplicates: {df_test.duplicated().sum()}")
     print(
         f"Test duplicates [no-attack]: {df_test.drop(columns=['Attack']).duplicated().sum()}"
     )
-    print(f"Classes: {get_duplicates_in_df(df_test)}\n")  # type: ignore
+    print(f"Classes: {get_duplicates_in_df_after_remove_attack_column(df_test)}\n")  # type: ignore
     print("-" * 50)
 
 
-def get_duplicates_in_df(df: pd.DataFrame):
+def get_duplicates_in_df_after_remove_attack_column(df: pd.DataFrame):
     df_no_attack = df.drop(columns=["Attack"])
     duplicates = df_no_attack[df_no_attack.duplicated()]
     duplicates_with_attack = pd.merge(
@@ -61,17 +44,6 @@ def get_duplicates_in_df(df: pd.DataFrame):
     )
     result = duplicates_with_attack["Attack"].value_counts()
     return list(zip(result.index.tolist(), result.values))
-
-
-# def get_duplicates_in_df(df: pd.DataFrame):
-#     df_no_attack = df.drop(columns=["Attack"])
-#     duplicates = df_no_attack[df_no_attack.duplicated()]
-#     duplicates_with_attack = pd.merge(
-#         duplicates, df["Attack"], left_index=True, right_index=True
-#     )
-#     result = duplicates_with_attack["Attack"].value_counts()
-
-#     return dict(zip(result.index.tolist(), result.values))
 
 
 def get_df(x, y, columns, extension):
@@ -161,6 +133,7 @@ if __name__ == "__main__":
             case "parquet":
                 df = pd.read_parquet(client_file_path, engine="pyarrow")
 
+        # df = remove_outliers(client_name, df)
         # df = df.drop(columns=COLUMNS_TO_REMOVE)
 
         x = df.iloc[:, :-1].values
@@ -179,10 +152,8 @@ if __name__ == "__main__":
         df_train = get_df(x_train, y_train, columns, file_extension)
         df_test = get_df(x_test, y_test, columns, file_extension)
 
-        df_train, df_test = remove_outliers(client_name, df_train, df_test)
-
         train_distribution = get_distribution(df_train, "train")
-        test_distribution = get_distribution(df_train, "test")
+        test_distribution = get_distribution(df_test, "test")
 
         __print_dataset_info(client_name, df_train, df_test)
 
@@ -220,6 +191,9 @@ if __name__ == "__main__":
     test_centralized = pd.concat(test_dfs)
 
     __print_dataset_info("centralized", train_centralized, test_centralized)
+
+    train_centralized = train_centralized.drop_duplicates()
+    test_centralized = test_centralized.drop_duplicates()
 
     path_to_centralized = os.path.join(TRAIN_TEST_PATH, "centralized")
     if not os.path.exists(path_to_centralized):

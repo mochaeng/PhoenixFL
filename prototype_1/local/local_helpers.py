@@ -45,7 +45,7 @@ class LocalMetrics:
 
 
 def get_local_loaders(
-    paths: Dict, batch_size=32
+    paths: Dict, batch_size
 ) -> Tuple[Tuple[DataLoader, DataLoader], ScalerType]:
     train_df, test_df = get_train_and_test_dfs(paths)
 

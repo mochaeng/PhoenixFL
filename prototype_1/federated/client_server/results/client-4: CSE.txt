@@ -1,0 +1,60 @@
+
+Server round: 1
+Evaluating client's model on its own testset
+	accuracy: 0.8106950521469116)
+Evaluating client's model on centralized testset
+	accuracy: 0.6943353414535522)
+
+Server round: 2
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 3
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 4
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 5
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 6
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 7
+Evaluating client's model on its own testset
+	accuracy: 0.8800182342529297)
+Evaluating client's model on centralized testset
+	accuracy: 0.7072785496711731)
+
+Server round: 8
+Evaluating client's model on its own testset
+	accuracy: 0.9415170550346375)
+Evaluating client's model on centralized testset
+	accuracy: 0.7187608480453491)
+
+Server round: 9
+Evaluating client's model on its own testset
+	accuracy: 0.95579993724823)
+Evaluating client's model on centralized testset
+	accuracy: 0.7286203503608704)
+
+Server round: 10
+Evaluating client's model on its own testset
+	accuracy: 0.9709932804107666)
+Evaluating client's model on centralized testset
+	accuracy: 0.7450164556503296)

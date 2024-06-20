@@ -14,10 +14,10 @@ PATH_SCALER = "datasets/data-for-prototype-02/"
 
 PREPROCESSED_TRAIN_TEST_DATASETS_PATH = "datasets/pre-processed/train-test"
 COLUMNS_TO_REMOVE = [
-    # "IPV4_SRC_ADDR",
-    # "IPV4_DST_ADDR",
-    # "L4_SRC_PORT",
-    # "L4_DST_PORT",
+    "IPV4_SRC_ADDR",
+    "IPV4_DST_ADDR",
+    "L4_SRC_PORT",
+    "L4_DST_PORT",
     "Attack",
 ]
 CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
@@ -55,15 +55,11 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler, RobustScaler]
 DataType = np.ndarray
 
-BATCH_SIZE = 512
+BATCH_SIZE = 1024
 
 
 def get_df(path: str) -> pd.DataFrame:
-    df = (
-        pd.read_parquet(path, engine="pyarrow").drop(columns=COLUMNS_TO_REMOVE)
-        # .drop_duplicates()
-    )
-    print(f"Duplicates: {df.duplicated().sum()}")
+    df = pd.read_parquet(path, engine="pyarrow").drop(columns=COLUMNS_TO_REMOVE)
     return df
 
 

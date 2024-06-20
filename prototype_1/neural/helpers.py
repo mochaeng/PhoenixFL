@@ -2,16 +2,7 @@ import torch
 import torch.amp
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
-import torch.nn.functional as F
-from torcheval.metrics import (
-    BinaryAccuracy,
-    BinaryPrecision,
-    BinaryRecall,
-    BinaryF1Score,
-)
-import copy
 from typing import Dict, Iterator, Tuple, Optional, Any, OrderedDict, Union, Literal
-import pandas as pd
 
 from neural.architectures import MLP
 
@@ -20,10 +11,10 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
 
 TRAIN_CONFIG = {
-    "epochs": 10,
+    "epochs": 5,
     "lr": 0.0001,
     "momentum": 0.9,
-    "weight_decay": 0.01,
+    "weight_decay": 0.1,
     "optimizer": "adam",
     "is_verbose": True,
     "is_epochs_logs": True,
@@ -35,14 +26,6 @@ def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, Data
     y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
     y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
-
-    # print(f"Min X train tensor: {x_train_tensor.min()}")
-    # print(f"Max X train tensor: {x_train_tensor.max()}")
-
-    # print(f"Min X test tensor: {x_test_tensor.min()}")
-    # print(f"Max X test tensor: {x_test_tensor.max()}")
-
-    # exit(1)
 
     train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
     test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
@@ -56,9 +39,6 @@ def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, Data
 def get_test_loader(data: dict, batch_size):
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
     y_test_tensor = torch.tensor(data["y_test"], dtype=torch.float32).view(-1, 1)
-
-    # print(f"Min values x_test: {x_test_tensor.min()}")
-    # print(f"Max values x_test: {x_test_tensor.max()}")
 
     test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
     test_loader = DataLoader(test_dataset, batch_size, shuffle=False)
