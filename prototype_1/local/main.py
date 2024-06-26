@@ -5,7 +5,7 @@ from local.local_helpers import get_local_loaders, get_eval_test_loader, LocalMe
 from pre_process.pre_process import CLIENTS_PATH, BATCH_SIZE
 from neural.helpers import DEVICE, TRAIN_CONFIG
 from neural.architectures import MLP
-from neural.train_test import train, evaluate_model
+from neural.train_eval import train, evaluate_model
 
 
 PATH_TO_SAVE = "local/metrics"

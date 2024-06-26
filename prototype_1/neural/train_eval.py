@@ -24,7 +24,9 @@ from neural.helpers import (
     check_models_equality,
 )
 
-TrainingStyle = Literal["standard"] | Literal["fedprox"] | Literal["fed+"]
+TrainingStyle = (
+    Literal["standard"] | Literal["fedprox"] | Literal["fed+"] | Literal["logits"]
+)
 
 
 def train(
@@ -43,6 +45,8 @@ def train(
             train_func = train_with_proximal_term
         case "fed+":
             train_func = train_with_smooth_delta
+        case "logits":
+            train_func = train_with_logits
         case _:
             train_func = train_standard
 
@@ -100,6 +104,8 @@ def train_with_proximal_term(
     global_params = copy.deepcopy(net).parameters()
 
     epochs_logs = {}
+
+    # logits = 0
 
     net.train()
     for epoch in range(train_config["epochs"]):
@@ -198,6 +204,52 @@ def train_with_smooth_delta(
             #         # optim = local_param.data - train_config["lr"] * local_param.grad
             #         # updated_param = (k * optim) + (1 - k) * (global_param + theta_param)
             #         # local_param.copy_(updated_param)
+
+            epoch_loss += loss.item() * inputs.size(0)
+            total += labels.size(0)
+            round_outputs = torch.round(torch.sigmoid(outputs))
+            correct += (round_outputs == labels).sum().item()
+
+        epoch_loss /= len(trainloader.dataset)  # type: ignore
+        epoch_acc = correct / total
+        epochs_logs[f"epoch_{epoch}"] = {
+            "loss": float(epoch_loss),
+            # "acc": float(epoch_acc),
+        }
+
+        if train_config["is_verbose"]:
+            print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
+
+    if train_config["is_epochs_logs"]:
+        return epochs_logs
+
+
+def train_with_logits(
+    net: nn.Module,
+    trainloader: DataLoader,
+    train_config={"epochs": 10, "lr": 1e-4, "momentum": 0.9, "weight_decay": 1e-5},
+):
+    if "tau" not in train_config:
+        raise ValueError(
+            "Value of tau not present in train config: impossible to train with logits adjusments"
+        )
+
+    criterion = CRITERION()
+
+    optimizer = get_optimizer(train_config.get("optimizer"), net, train_config)
+    epochs_logs = {}
+
+    net.train()
+    for epoch in range(train_config["epochs"]):
+        correct, total, epoch_loss = 0, 0, 0.0
+        for batch_idx, (inputs, labels) in enumerate(trainloader):
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
             epoch_loss += loss.item() * inputs.size(0)
             total += labels.size(0)

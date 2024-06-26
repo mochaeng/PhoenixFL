@@ -10,11 +10,12 @@ from neural.architectures import MLP
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
 
+
 TRAIN_CONFIG = {
-    "epochs": 5,
-    "lr": 0.0001,
+    "epochs": 1,
+    "lr": 0.001,
     "momentum": 0.9,
-    "weight_decay": 0.1,
+    "weight_decay": 0,
     "optimizer": "adam",
     "is_verbose": True,
     "is_epochs_logs": True,

@@ -270,10 +270,6 @@ def get_strategies_metrics_by_rounds_chart(
 
 
 def get_approaches_losses_with_epochs(approach: str) -> Tuple[Figure, str]:
-    def fedprox_line_parser(file_name: str):
-        _, epochs, mu = file_name.split("_")
-        return
-
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     axs = axs.flatten()
 
@@ -310,7 +306,12 @@ def get_approaches_losses_with_epochs(approach: str) -> Tuple[Figure, str]:
                     case "fedprox":
                         epochs, mu = key.split("_")
                         label = f"epochs = {epochs}, mu = {mu}"
-                    case "fedavg":
+                    case "fedadam":
+                        epochs, tau, eta, eta_l = key.split("_")
+                        label = (
+                            f"epochs = {epochs}, tau = {tau}, eta = {eta}, etal={eta_l}"
+                        )
+                    case _:
                         epochs = key.split("_")
                         label = f"epochs = {epochs[0]}"
 
@@ -325,7 +326,7 @@ def get_approaches_losses_with_epochs(approach: str) -> Tuple[Figure, str]:
 
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lines = [lines[0], lines[1], lines[2]]
+    lines = [lines[0], lines[1], lines[2], lines[3]]
     fig.legend(
         lines,
         labels,

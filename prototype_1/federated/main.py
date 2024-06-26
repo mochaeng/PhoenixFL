@@ -8,7 +8,7 @@ import argparse
 
 from pre_process.pre_process import BATCH_SIZE
 from neural.architectures import MLP
-from neural.train_test import train, evaluate_model
+from neural.train_eval import train, evaluate_model
 from neural.helpers import DEVICE, TRAIN_CONFIG
 from federated.federated_helpers import (
     get_all_federated_loaders,

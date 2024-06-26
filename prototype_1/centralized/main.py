@@ -12,7 +12,7 @@ from pre_process.pre_process import (
     BATCH_SIZE,
     PATH_SCALER,
 )
-from neural.train_test import train, evaluate_model
+from neural.train_eval import train, evaluate_model
 from neural.helpers import TRAIN_CONFIG, get_test_loader, DEVICE
 from neural.architectures import MLP
 

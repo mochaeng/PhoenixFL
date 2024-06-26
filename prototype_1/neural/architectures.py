@@ -5,9 +5,11 @@ class MLP(nn.Module):
     def __init__(
         self,
         input_layer_size: int = 39,
-        hidden_layers_size: list[int] = [39, 21, 12],
+        # hidden_layers_size: list[int] = [39, 20, 5],
+        # hidden_layers_size: list[int] = [128, 128],
+        hidden_layers_size: list[int] = [512, 384, 256, 128, 64],
         output_layer_size: int = 1,
-        dropout_prob: float = 0.3,
+        dropout_prob: float = 0.5,
     ) -> None:
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
@@ -17,9 +19,17 @@ class MLP(nn.Module):
             self.layers.append(nn.Linear(current_layer_size, layer_size))
             self.layers.append(nn.LayerNorm(layer_size))
             self.layers.append(nn.ReLU(inplace=True))
-            # self.layers.append(nn.Dropout(p=dropout_prob))
+            self.layers.append(nn.Dropout(p=dropout_prob))
             current_layer_size = layer_size
         self.layers.append(nn.Linear(current_layer_size, output_layer_size))
+
+        self.apply(self._init_weights)
+
+    def _init_weights(self, layer):
+        if isinstance(layer, nn.Linear):
+            nn.init.xavier_uniform_(layer.weight)
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)
 
     def forward(self, x):
         for layer in self.layers:

@@ -5,7 +5,7 @@ from federated.federated_helpers import FederatedMetrics
 import os
 
 from pre_process.pre_process import BATCH_SIZE
-from neural.train_test import train, evaluate_model
+from prototype_1.neural.train_eval import train, evaluate_model
 from neural.helpers import DEVICE
 from neural.architectures import MLP
 from federated.federated_helpers import (
