@@ -9,7 +9,7 @@ import argparse
 from pre_process.pre_process import BATCH_SIZE
 from neural.architectures import MLP
 from neural.train_eval import train, evaluate_model
-from neural.helpers import DEVICE, TRAIN_CONFIG
+from neural.helpers import DEVICE, TRAIN_CONFIG, zeroing_parameters
 from federated.federated_helpers import (
     get_all_federated_loaders,
     get_parameters,
@@ -46,13 +46,15 @@ class FlowerNumPyClient(fl.client.NumPyClient):
         # else:
         #     config["epochs"] = 8
 
-        if "eta_l" in config:
-            config["lr"] = config["eta_l"]
+        # if "eta_l" in config:
+        #     config["lr"] = config["eta_l"]
 
         if "proximal_mu" in config:
             training_style = "fedprox"
         else:
             training_style = "standard"
+
+        config["lr"] = 0.1 / (1 + server_round)
 
         print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
@@ -216,7 +218,8 @@ if __name__ == "__main__":
         )
 
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
-    starting_params = get_parameters(MLP().to(DEVICE))
+    initial_model = MLP().to(DEVICE)
+    starting_params = get_parameters(initial_model)
 
     strategy_config = {
         "fraction_fit": fit_clients / TOTAL_NUMBER_OF_CLIENTS,

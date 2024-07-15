@@ -20,15 +20,15 @@ COLUMNS_TO_REMOVE = [
     "L4_DST_PORT",
     "Attack",
 ]
-CLIENTS_NAMES = ["client-1: ToN", "client-2: BoT", "client-3: UNSW", "client-4: CSE"]
+CLIENTS_NAMES = ["client-2: BoT", "client-3: UNSW", "client-4: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
 file_extension = "parquet"
 DATASETS_PATHS = {
-    "TON": {
-        "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.{file_extension}",
-        "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.{file_extension}",
-    },
+    # "TON": {
+    #     "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_train.{file_extension}",
+    #     "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-1: ToN/NF-TON-IOT-V2_test.{file_extension}",
+    # },
     "BOT": {
         "TRAIN": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_train.{file_extension}",
         "TEST": f"{PREPROCESSED_TRAIN_TEST_DATASETS_PATH}/client-2: BoT/NF-BOT-IOT-V2_test.{file_extension}",
@@ -55,7 +55,7 @@ SCALER = MinMaxScaler
 ScalerType = Union[MinMaxScaler, StandardScaler, RobustScaler]
 DataType = np.ndarray
 
-BATCH_SIZE = 512
+BATCH_SIZE = 1024
 
 
 def get_df(path: str) -> pd.DataFrame:

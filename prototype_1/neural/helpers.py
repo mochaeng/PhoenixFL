@@ -12,10 +12,10 @@ CRITERION = torch.nn.BCEWithLogitsLoss
 
 
 TRAIN_CONFIG = {
-    "epochs": 1,
+    "epochs": 4,
     "lr": 0.001,
     "momentum": 0.9,
-    "weight_decay": 0,
+    "weight_decay": 0.1,
     "optimizer": "adam",
     "is_verbose": True,
     "is_epochs_logs": True,
@@ -88,6 +88,11 @@ def initialize_local_model_for_fedplus(
                 lambda_value * global_param
             )
             local_param.copy_(updated_param)
+
+
+def zeroing_parameters(model: nn.Module):
+    for param in model.parameters():
+        nn.init.constant_(param, 0)
 
 
 def calculate_regularization_degree(sigma, learning_rate):

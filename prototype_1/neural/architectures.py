@@ -5,11 +5,10 @@ class MLP(nn.Module):
     def __init__(
         self,
         input_layer_size: int = 39,
-        # hidden_layers_size: list[int] = [39, 20, 5],
-        # hidden_layers_size: list[int] = [128, 128],
-        hidden_layers_size: list[int] = [512, 384, 256, 128, 64],
+        # hidden_layers_size: list[int] = [512, 384, 256, 128, 64],
+        hidden_layers_size: list[int] = [256, 128, 64],
         output_layer_size: int = 1,
-        dropout_prob: float = 0.5,
+        dropout_prob: float = 0.2,
     ) -> None:
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
@@ -18,6 +17,7 @@ class MLP(nn.Module):
         for layer_size in hidden_layers_size:
             self.layers.append(nn.Linear(current_layer_size, layer_size))
             self.layers.append(nn.LayerNorm(layer_size))
+            # self.layers.append(nn.BatchNorm1d(layer_size))
             self.layers.append(nn.ReLU(inplace=True))
             self.layers.append(nn.Dropout(p=dropout_prob))
             current_layer_size = layer_size

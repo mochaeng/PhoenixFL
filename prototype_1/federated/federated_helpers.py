@@ -1,5 +1,6 @@
 from flwr.common import Scalar
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy as np
 import os
@@ -18,7 +19,7 @@ from pre_process.pre_process import (
     get_standardized_df,
 )
 
-TOTAL_NUMBER_OF_CLIENTS = 4
+TOTAL_NUMBER_OF_CLIENTS = 3
 NUM_ROUNDS = 3
 
 PATH_TO_METRICS_FOLDER = "federated/metrics"
@@ -65,9 +66,12 @@ def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
-def set_parameters(net, parameters: List[np.ndarray]):
+def set_parameters(net: nn.Module, parameters: List[np.ndarray]):
     params_dict = zip(net.state_dict().keys(), parameters)
-    state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+    # state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+    state_dict = OrderedDict()
+    for k, v in params_dict:
+        state_dict[k] = torch.tensor(v, dtype=net.state_dict()[k].dtype)
     net.load_state_dict(state_dict, strict=True)
 
 

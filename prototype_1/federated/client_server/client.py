@@ -85,9 +85,6 @@ class Client(fl.client.NumPyClient):
 
         print(f"\n[Client {self.cid}] evaluate, config: {config}")
 
-        # model_to_evaluate = MLP().to(DEVICE)
-        # set_parameters(model_to_evaluate, parameters)
-
         results_str = f"\nServer round: {config['server_round']}\n"
         results_str += "Evaluating client's model on its own testset\n"
         own_metrics = evaluate_model(self.net, self.eval_loader)
