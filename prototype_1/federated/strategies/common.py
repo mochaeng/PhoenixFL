@@ -282,7 +282,6 @@ class FedAdamWithFederatedEvaluation(fl.server.strategy.FedAdam):
         Sends tau, eta and eta_l constants for fedadam
         """
 
-        # Get the standard client/config pairs from the FedAvg super-class
         client_config_pairs = super().configure_fit(
             server_round, parameters, client_manager
         )
@@ -371,13 +370,72 @@ class FedYogiWithFederatedEvaluation(fl.server.strategy.FedYogi):
 
         return super().aggregate_evaluate(server_round, results, failures)
 
+    @override
+    def configure_fit(
+        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+    ) -> List[Tuple[ClientProxy, FitIns]]:
+        """Configure the next round of training
+
+        Sends tau, eta and eta_l constants for fedadam
+        """
+
+        client_config_pairs = super().configure_fit(
+            server_round, parameters, client_manager
+        )
+
+        # Return client/config pairs with the delta added
+        return [
+            (
+                client,
+                FitIns(
+                    fit_ins.parameters,
+                    {
+                        **fit_ins.config,
+                        "eta_l": self.eta_l,
+                    },
+                ),
+            )
+            for client, fit_ins in client_config_pairs
+        ]
+
 
 class FedMedianWithFederatedEvaluation(fl.server.strategy.FedMedian):
     def __init__(
         self,
         *,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 1.0,
+        min_fit_clients: int = 2,
+        min_evaluate_clients: int = 2,
+        min_available_clients: int = 2,
+        evaluate_fn: Optional[
+            Callable[
+                [int, NDArrays, Dict[str, Scalar]],
+                Optional[Tuple[float, Dict[str, Scalar]]],
+            ]
+        ] = None,
+        on_fit_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        on_evaluate_config_fn: Optional[Callable[[int], Dict[str, Scalar]]] = None,
+        accept_failures: bool = True,
+        initial_parameters: Optional[Parameters] = None,
+        fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         on_federated_evaluation_results: FederatedEvalutionDataFn,
-    ):
+    ) -> None:
+        super().__init__(
+            fraction_fit=fraction_fit,
+            fraction_evaluate=fraction_evaluate,
+            min_fit_clients=min_fit_clients,
+            min_evaluate_clients=min_evaluate_clients,
+            min_available_clients=min_available_clients,
+            evaluate_fn=evaluate_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            fit_metrics_aggregation_fn=fit_metrics_aggregation_fn,
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+        )
         self.on_federated_evaluation_results = on_federated_evaluation_results
 
     def __repr__(self) -> str:

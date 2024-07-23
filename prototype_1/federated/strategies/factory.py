@@ -97,7 +97,7 @@ def create_federated_strategy(algorithm_name: str, **kwargs) -> FederatedStrateg
         "fedadagrad": FedAdagradStrategy,
         "fedadam": FedAdamStrategy,
         "fedyogi": FedYogiStrategy,
-        "fedmedian": FedYogiStrategy,
+        "fedmedian": FedMedianStrategy,
         "fedtrimmed": FedTrimmedAvgStrategy,
     }
 

@@ -23,11 +23,14 @@ if __name__ == "__main__":
 
     print(plot_metrics)
 
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(6, 12))
     axes_list = axs.flatten()
 
     x = list(map(lambda value: value + 1, x))
     for idx, client_name in enumerate(CLIENTS_NAMES):
+        if idx == len(CLIENTS_NAMES):
+            break
+
         y = plot_metrics[client_name]
         axes_list[idx].plot(
             x,

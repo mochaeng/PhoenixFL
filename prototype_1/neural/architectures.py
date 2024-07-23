@@ -6,7 +6,7 @@ class MLP(nn.Module):
         self,
         input_layer_size: int = 39,
         # hidden_layers_size: list[int] = [512, 384, 256, 128, 64],
-        hidden_layers_size: list[int] = [256, 128, 64],
+        hidden_layers_size: list[int] = [512, 256, 128, 96, 48],
         output_layer_size: int = 1,
         dropout_prob: float = 0.2,
     ) -> None:
@@ -19,7 +19,7 @@ class MLP(nn.Module):
             self.layers.append(nn.LayerNorm(layer_size))
             # self.layers.append(nn.BatchNorm1d(layer_size))
             self.layers.append(nn.ReLU(inplace=True))
-            self.layers.append(nn.Dropout(p=dropout_prob))
+            # self.layers.append(nn.Dropout(p=dropout_prob))
             current_layer_size = layer_size
         self.layers.append(nn.Linear(current_layer_size, output_layer_size))
 

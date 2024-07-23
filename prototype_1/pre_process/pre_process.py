@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from scipy.sparse import spmatrix
-import joblib
 from typing import Dict, List, Tuple, Union
 from result import Result, Ok, Err
 import json
@@ -20,7 +18,7 @@ COLUMNS_TO_REMOVE = [
     "L4_DST_PORT",
     "Attack",
 ]
-CLIENTS_NAMES = ["client-2: BoT", "client-3: UNSW", "client-4: CSE"]
+CLIENTS_NAMES = ["client-1: BOT", "client-2: UNSW", "client-3: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
 file_extension = "parquet"

@@ -41,20 +41,18 @@ class FlowerNumPyClient(fl.client.NumPyClient):
 
         set_parameters(self.net, parameters)
 
-        # if server_round >= 1 and server_round <= 3:
-        #     config["epochs"] = 5
+        # if server_round >= 1 and server_round <= 5:
+        #     config["epochs"] = 3
         # else:
-        #     config["epochs"] = 8
+        #     config["epochs"] = 5
 
-        # if "eta_l" in config:
-        #     config["lr"] = config["eta_l"]
+        if "eta_l" in config:
+            config["lr"] = config["eta_l"]
 
         if "proximal_mu" in config:
             training_style = "fedprox"
         else:
             training_style = "standard"
-
-        config["lr"] = 0.1 / (1 + server_round)
 
         print(f"\n[Client {self.cid}], round {server_round} fit, config: {config}")
 
@@ -219,6 +217,7 @@ if __name__ == "__main__":
 
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
     initial_model = MLP().to(DEVICE)
+    # zeroing_parameters(initial_model)
     starting_params = get_parameters(initial_model)
 
     strategy_config = {

@@ -12,8 +12,8 @@ CRITERION = torch.nn.BCEWithLogitsLoss
 
 
 TRAIN_CONFIG = {
-    "epochs": 4,
-    "lr": 0.001,
+    "epochs": 5,
+    "lr": 0.0001,
     "momentum": 0.9,
     "weight_decay": 0.1,
     "optimizer": "adam",

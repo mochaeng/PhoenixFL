@@ -61,7 +61,7 @@ def get_distribution(df: pd.DataFrame, distribution_name: str):
 
 def get_paths(file_extension):
     return [
-        ("client-1: ToN", f"NF-TON-IOT-V2.{file_extension}"),
+        # ("client-1: ToN", f"NF-TON-IOT-V2.{file_extension}"),
         ("client-2: BoT", f"NF-BOT-IOT-V2.{file_extension}"),
         ("client-3: UNSW", f"NF-UNSW-NB15-V2.{file_extension}"),
         ("client-4: CSE", f"NF-CSE-CIC-IDS2018-V2.{file_extension}"),
