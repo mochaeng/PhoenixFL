@@ -21,82 +21,82 @@ The `--test-perc` argument must be a value between `0.1` and `0.5`, default to `
 ### NF-ToN-IoT-v2
 
 - Original dataset contains 16_940_496 records with no missing or duplicated data.
-- PhoenixFL utilizes approximately 3% (508_215 records) of the original.
+- PhoenixFL utilizes approximately ?% (250_00 records) of the original.
 
-- I removed the indexes `325792 (benign)`, `356361 (Benign)` from the column `DST_TO_SRC_SECOND_BYTES` because they were equals to: $2.3 \cdot 10^{139}$ and $2.6 \cdot 10^{53}$. Clearly outliers
+<!-- - I removed the indexes `325792 (benign)`, `356361 (Benign)` from the column `DST_TO_SRC_SECOND_BYTES` because they were equals to: $2.3 \cdot 10^{139}$ and $2.6 \cdot 10^{53}$. Clearly outliers -->
 
-| Attack     | Amount  | Original Ratio (%) | SRS    |
-| ---------- | ------- | ------------------ | ------ |
-| Benign     | 6099469 | 36.01              | 182984 |
-| scanning   | 3781419 | 22.32              | 113443 |
-| xss        | 2455020 | 14.49              | 73651  |
-| ddos       | 2026234 | 11.96              | 60787  |
-| password   | 1153323 | 6.81               | 34600  |
-| dos        | 712609  | 4.21               | 21378  |
-| injection  | 684465  | 4.04               | 20534  |
-| backdoor   | 16809   | 0.10               | 504    |
-| mitm       | 7723    | 0.05               | 232    |
-| ransomware | 3425    | 0.02               | 103    |
+| Attack     | Amount  | Original Ratio (%) | SRS   |
+| ---------- | ------- | ------------------ | ----- |
+| Benign     | 6099469 | 36.01              | 90013 |
+| scanning   | 3781419 | 22.32              | 55804 |
+| xss        | 2455020 | 14.49              | 36230 |
+| ddos       | 2026234 | 11.96              | 29902 |
+| password   | 1153323 | 6.81               | 17020 |
+| dos        | 712609  | 4.21               | 10516 |
+| injection  | 684465  | 4.04               | 10101 |
+| backdoor   | 16809   | 0.10               | 248   |
+| mitm       | 7723    | 0.05               | 114   |
+| ransomware | 3425    | 0.02               | 51    |
 
 ### NF-BoT-IoT-v2
 
 - Original dataset contains 37_763_497 records with no missing or duplicated data.
-- PhoenixFL utilizes approximately 0.6% (226_581 records) of the original.
+- PhoenixFL utilizes approximately ?% (250_000 records) of the original.
 
 |     Attack     |  Amount  | Ratio (%) | Actual amount |
 | :------------: | :------: | :-------: | :-----------: |
-|     Theft      |   2431   | 0.000064  |      15       |
-|     Benign     |  135037  | 0.003576  |      810      |
-| Reconnaissance | 2620999  | 0.069406  |     15726     |
-|      DoS       | 16673183 | 0.441516  |    100039     |
-|      DDoS      | 18331847 | 0.485438  |    109991     |
+|     Theft      |   2431   | 0.000064  |      16       |
+|     Benign     |  135037  | 0.003576  |      894      |
+| Reconnaissance | 2620999  | 0.069406  |     17351     |
+|      DoS       | 16673183 | 0.441516  |    110379     |
+|      DDoS      | 18331847 | 0.485438  |    121360     |
 
 ### NF-UNSW-NB15-v2
 
 - Original dataset contains 2_390_275 records with no missing or duplicated data.
-- PhoenixFL utilizes approximately 15% (239_028 records).
+- PhoenixFL utilizes approximately ?% (250_000 records).
 
 | Attack         | Amount  | Ratio (%) | Actual amount |
 | -------------- | ------- | --------- | ------------- |
-| Benign         | 2295222 | 96.02     | 229_523       |
-| Exploits       | 31551   | 1.32      | 3155          |
-| Fuzzers        | 22310   | 0.93      | 2231          |
-| Generic        | 16560   | 0.69      | 1656          |
-| Reconnaissance | 12779   | 0.53      | 1278          |
-| DoS            | 5794    | 0.24      | 579           |
-| Analysis       | 2299    | 0.10      | 230           |
-| Backdoor       | 2169    | 0.09      | 217           |
-| Shellcode      | 1427    | 0.06      | 143           |
-| Worms          | 164     | 0.01      | 16            |
+| Benign         | 2295222 | 96.02     | 240058        |
+| Exploits       | 31551   | 1.32      | 3300          |
+| Fuzzers        | 22310   | 0.93      | 2333          |
+| Generic        | 16560   | 0.69      | 1732          |
+| Reconnaissance | 12779   | 0.53      | 1337          |
+| DoS            | 5794    | 0.24      | 606           |
+| Analysis       | 2299    | 0.10      | 240           |
+| Backdoor       | 2169    | 0.09      | 227           |
+| Shellcode      | 1427    | 0.06      | 149           |
+| Worms          | 164     | 0.01      | 17            |
 
 ### NF-CSE-CIC-IDS2018-v2
 
 - Original dataset contains 18_893_708 records with no missing or duplicated data.
-- PhoenixFL utilizes approximately 1% (188_936 records).
+- PhoenixFL utilizes approximately ?% (250_000 records).
 
-- I removed the index `98555 (Benign)` from the column `SRC_TO_SRC_SECOND_BYTES` because the value was equal $8.8 \cdot 10^{209}$
+- I removed the index `111639 (Benign)`, `98557 (Benign)`, `237729 (Benign)`, `166566 (Benign)` from the column `SRC_TO_DST_SECOND_BYTES` because the values were equal to $8.8 \cdot 10^{213}$, $8.8 \cdot 10^{201}$, $8.8 \cdot 10^{201}$, $8.8 \cdot 10^{199}$. Clearly outliers that were causing the std to be `inf`.
 
 |          Attack          |  Amount  | Ratio (%) | Actual amount |
 | :----------------------: | :------: | :-------: | :-----------: |
-|      SQL Injection       |   432    | 0.000023  |       4       |
-|     Brute Force -XSS     |   927    | 0.000049  |       9       |
-|   DDOS attack-LOIC-UDP   |   2112   | 0.000112  |      21       |
-|     Brute Force -Web     |   2143   | 0.000113  |      21       |
-|  DoS attacks-Slowloris   |   9512   | 0.000503  |      95       |
-| DoS attacks-SlowHTTPTest |  14116   | 0.000747  |      141      |
-|      FTP-BruteForce      |  25933   | 0.001373  |      259      |
-|  DoS attacks-GoldenEye   |  27723   | 0.001467  |      277      |
-|      SSH-Bruteforce      |  94979   | 0.005027  |      950      |
-|      Infilteration       |  116361  | 0.006159  |     1164      |
-|           Bot            |  143097  | 0.007574  |     1431      |
-|  DDoS attacks-LOIC-HTTP  |  307300  | 0.016265  |     3073      |
-|     DoS attacks-Hulk     |  432648  | 0.022899  |     4326      |
-|     DDOS attack-HOIC     | 1080858  | 0.057207  |     10809     |
-|          Benign          | 16635567 | 0.880482  |    166356     |
+|      SQL Injection       |   432    | 0.000023  |       6       |
+|     Brute Force -XSS     |   927    | 0.000049  |      12       |
+|   DDOS attack-LOIC-UDP   |   2112   | 0.000112  |      28       |
+|     Brute Force -Web     |   2143   | 0.000113  |      28       |
+|  DoS attacks-Slowloris   |   9512   | 0.000503  |      126      |
+| DoS attacks-SlowHTTPTest |  14116   | 0.000747  |      187      |
+|      FTP-BruteForce      |  25933   | 0.001373  |      343      |
+|  DoS attacks-GoldenEye   |  27723   | 0.001467  |      367      |
+|      SSH-Bruteforce      |  94979   | 0.005027  |     1257      |
+|      Infilteration       |  116361  | 0.006159  |     1540      |
+|           Bot            |  143097  | 0.007574  |     1893      |
+|  DDoS attacks-LOIC-HTTP  |  307300  | 0.016265  |     4066      |
+|     DoS attacks-Hulk     |  432648  | 0.022899  |     5725      |
+|     DDOS attack-HOIC     | 1080858  | 0.057207  |     14302     |
+|          Benign          | 16635567 | 0.880482  |    220120     |
 
 ### Centralized dataset
 
-- Centralized datasets contains 1_028_165 records.
+- Centralized datasets contains ? records.
 
 |          Attack          | Amount |
 | :----------------------: | :----: |
