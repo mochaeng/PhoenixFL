@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+from scipy.stats import shapiro
 
 METRICS_PATH = "local/metrics"
 FILE_NAME = "metrics.json"
@@ -16,9 +17,9 @@ if __name__ == "__main__":
 
     file = open(results_path, "w+")
 
-    group_by = {}
+    # group_by = {}
     for model_name in metrics.keys():
-        group_by[model_name] = {}
+        # group_by[model_name] = {}
 
         file.write(f"[{model_name}]\n")
 
@@ -30,13 +31,16 @@ if __name__ == "__main__":
             # stats (mean, median, std, max, min, shapiro-wilk)
             def stats_for_metric(df, f):
                 for metric in df:
+                    shapiro_test = shapiro(df[metric].values)
                     f.write(f"\t\t{metric}: ")
+
                     data = {
-                        "mean": df[metric].mean(),
-                        "median": df[metric].median(),
-                        "std": df[metric].std(),
-                        "max": df[metric].max(),
-                        "min": df[metric].min(),
+                        "mean": float(df[metric].mean()),
+                        "median": float(df[metric].median()),
+                        "std": float(df[metric].std()),
+                        "max": float(df[metric].max()),
+                        "min": float(df[metric].min()),
+                        "shapiro": shapiro_test,
                     }
                     f.write(str(data) + "\n")
 

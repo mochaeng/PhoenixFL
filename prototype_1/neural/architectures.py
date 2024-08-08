@@ -5,7 +5,6 @@ class MLP(nn.Module):
     def __init__(
         self,
         input_layer_size: int = 39,
-        # hidden_layers_size: list[int] = [512, 384, 256, 128, 64],
         hidden_layers_size: list[int] = [512, 256, 128, 96, 48],
         output_layer_size: int = 1,
         dropout_prob: float = 0.2,

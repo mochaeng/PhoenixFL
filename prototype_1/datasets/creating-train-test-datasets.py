@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete-columns",
         type=bool,
-        help="The percentual of test distribution",
+        help="",
         default=True,
     )
 

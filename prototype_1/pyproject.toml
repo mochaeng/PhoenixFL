@@ -11,13 +11,13 @@ pandas = "^2.2.2"
 scikit-learn = "^1.4.2"
 scipy = "^1.13.0"
 torch = "^2.3.0"
-flwr = {extras = ["simulation"], version = "^1.8.0"}
+flwr = { extras = ["simulation"], version = "1.8.0" }
 torcheval = "^0.0.7"
 pyarrow = "^16.0.0"
 matplotlib = "^3.8.4"
 skorch = "^0.15.0"
 result = "^0.16.1"
-dask = {extras = ["dataframe"], version = "^2024.5.2"}
+dask = { extras = ["dataframe"], version = "^2024.5.2" }
 overrides = "^7.7.0"
 ipykernel = "^6.29.4"
 

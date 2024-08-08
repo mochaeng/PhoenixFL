@@ -254,6 +254,8 @@ if __name__ == "__main__":
     weighteds_metrics = []
 
     for num_model in range(num_models):
+        print(f"Model [{num_model}]")
+
         history: History = fl.simulation.start_simulation(
             client_fn=client_fn,
             num_clients=TOTAL_NUMBER_OF_CLIENTS,

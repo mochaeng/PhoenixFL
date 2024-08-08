@@ -13,14 +13,14 @@ PATH_TO_SAVE = "local/metrics"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simulating the training of ML models")
     parser.add_argument(
-        "--num-iter",
+        "--num-models",
         type=int,
         help="The number of models to be trained",
         default=1,
     )
 
     args = parser.parse_args()
-    num_iterations = args.num_iter
+    num_iterations = args.num_models
 
     metrics = LocalMetrics()
     global_metrics = {}
