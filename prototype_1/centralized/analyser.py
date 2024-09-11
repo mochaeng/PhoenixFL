@@ -27,9 +27,10 @@ if __name__ == "__main__":
             shapiro_test = shapiro(df[metric].values)
 
             file.write(f"\t[{metric}]:\n")
-            file.write(f"\t\tmean: {df[metric].mean()}\n")
+            file.write(f"\t\tmean: {df[metric].mean() * 100}\n")
             file.write(f"\t\tmedian: {df[metric].median()}\n")
-            file.write(f"\t\tstd: {df[metric].std()}\n")
+            file.write(f"\t\tvariance: {df[metric].var()}\n")
+            file.write(f"\t\tstd: {df[metric].std() * 100}\n")
             file.write(f"\t\tmax: {df[metric].max()}\n")
             file.write(f"\t\tmin: {df[metric].min()}\n")
             file.write(f"\t\tshapiro: {shapiro_test}\n")

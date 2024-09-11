@@ -2,7 +2,7 @@ import torch
 import torch.amp
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
-from typing import Dict, Iterator, Tuple, Optional, Any, OrderedDict, Union, Literal
+from typing import Dict, Iterator, Tuple
 
 from neural.architectures import MLP
 
@@ -111,13 +111,13 @@ def get_parameters_as_tensor(model: nn.Module) -> torch.Tensor:
 
 def get_optimizer(name, net, train_config):
     if name == "adam":
-        return torch.optim.AdamW(
+        return torch.optim.AdamW(  # type: ignore
             net.parameters(),
             lr=train_config["lr"],
             weight_decay=train_config["weight_decay"],
         )
     else:
-        return torch.optim.SGD(
+        return torch.optim.SGD(  # type: ignore
             net.parameters(),
             lr=train_config["lr"],
             momentum=train_config["momentum"],

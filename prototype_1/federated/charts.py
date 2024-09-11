@@ -53,7 +53,7 @@ def get_metrics(approach: str, is_weighted_metrics: bool = False):
 
 def get_approach_metric_by_rounds(approach: str, metric_name: str):
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
-    axs = axs.flatten()
+    axs = axs.flatten()  # type: ignore
 
     models_metrics = get_metrics(approach, True)
     _, best_model_idx = get_model_idx_with_smallest_distributed_loss(models_metrics)
@@ -96,7 +96,7 @@ def get_approach_metric_by_rounds(approach: str, metric_name: str):
 
 def get_approach_loss_by_rounds(approach: str) -> Tuple[Figure, str]:
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
-    axs = axs.flatten()
+    axs = axs.flatten()  # type: ignore
 
     metrics = get_metrics(approach)
     for key, metrics_data in metrics.items():

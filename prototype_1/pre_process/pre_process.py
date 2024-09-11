@@ -21,6 +21,12 @@ COLUMNS_TO_REMOVE = [
 CLIENTS_NAMES = ["client-1: BOT", "client-2: UNSW", "client-3: CSE"]
 METRICS_NAMES = ["accuracy", "precision", "recall", "f1_score"]
 
+CLIENTS_NAMES_CHARTS = {
+    "client-1: BOT": "Cliente-1: BOT",
+    "client-2: UNSW": "Cliente-2: UNSW",
+    "client-3: CSE": "Cliente-3: CSE",
+}
+
 file_extension = "parquet"
 DATASETS_PATHS = {
     # "TON": {
