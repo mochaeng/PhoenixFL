@@ -2,7 +2,7 @@
 name = "prototype-2"
 version = "0.1.0"
 description = ""
-authors = ["Luiz Campos <campos.antoonio@gmail.com>"]
+authors = []
 readme = "README.md"
 package-mode = false
 

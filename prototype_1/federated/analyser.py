@@ -54,6 +54,8 @@ if __name__ == "__main__":
             df = pd.DataFrame.from_dict(values)
 
             for metric in df:
+                # values = list(map(lambda n: n * 100, df[metric].values))
+                # shapiro_test = shapiro(values)
                 shapiro_test = shapiro(df[metric].values)
                 file.write(f"\t[{metric}]:\n")
                 file.write(f"\t\tmean: {df[metric].mean() * 100}\n")

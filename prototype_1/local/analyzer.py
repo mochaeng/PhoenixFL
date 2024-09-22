@@ -35,9 +35,9 @@ if __name__ == "__main__":
                     f.write(f"\t\t{metric}: ")
 
                     data = {
-                        "mean": float(df[metric].mean()),
+                        "mean": float(df[metric].mean() * 100),
                         "median": float(df[metric].median()),
-                        "std": float(df[metric].std()),
+                        "std": float(df[metric].std() * 100),
                         "max": float(df[metric].max()),
                         "min": float(df[metric].min()),
                         "shapiro": shapiro_test,
