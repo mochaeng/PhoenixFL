@@ -2,6 +2,7 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import numpy as np
+import time
 
 
 class PytorchClassifier:

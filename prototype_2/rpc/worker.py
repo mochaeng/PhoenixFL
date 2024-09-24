@@ -2,18 +2,21 @@ import functools
 import time
 import json
 import pika
+import pandas as pd
+from uuid import uuid4
 from pika.exchange_type import ExchangeType
+
 from rpc.exceptions import ConnectionNotOpenedError, ChannelNotOpenedError
 from rpc.classifier import PytorchClassifier
 
 
-class AsyncConsumer:
+class Worker:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
-    def __init__(self, amqp_url, classifier: PytorchClassifier):
+    def __init__(self, amqp_url, classifier: PytorchClassifier, name: str):
         self.should_reconnect = False
         self.was_consuming = False
 
@@ -25,8 +28,12 @@ class AsyncConsumer:
         self._consuming = False
         # In production, experiment with higher prefetch values
         # for higher consumer throughput
-        self._prefetch_count = 1
+        self._prefetch_count = 2
         self.classifier = classifier
+
+        self.processed_packages = 0
+        self.latencies: list[float] = []
+        self.name = name
 
     def connect(self):
         print(f"Connecting to {self._url}")
@@ -157,15 +164,52 @@ class AsyncConsumer:
             raise ChannelNotOpenedError()
         self._channel.close()
 
-    def on_message(self, channel, basic_deliver, properties, body):
-        print(
-            f"Received message # {basic_deliver.delivery_tag} from {properties.app_id}: {body}"
-        )
-        json_data = json.loads(body)
-        prediction = self.classifier.get_prediction(json_data)
-        print(f"{prediction == 1}")
+    def write_latencies(self):
+        print("is this funcking shit being called?")
+        latencies_pd = pd.DataFrame(self.latencies, columns=["Latency"])
+        metrics = {
+            "mean": latencies_pd.mean(),
+            "median": latencies_pd.median(),
+            "quatile-75": latencies_pd.quantile(75),
+            "quatile-95": latencies_pd.quantile(95),
+            "quatile-99": latencies_pd.quantile(99),
+        }
+        path = f"data/workers/{self.name}"
+        latencies_pd.to_csv(f"{path}_latencies.csv")
+        with open(f"{path}_metrics.json", "w+") as f:
+            json.dump(metrics, f, indent=4)
 
+    def check_message_limit(self):
+        ...
+        # if self.processed_packages >= 100:
+        #     self.stop()
+        #     self.write_latencies()
+        #     exit(0)
+
+    def on_message(self, channel, basic_deliver, properties, body):
+        self.check_message_limit()
+        print(f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}")
+        processing_start_time = time.time()
+
+        message = json.loads(body)
+        client_timestamp = float(message["timestamp"])
+        packet = message["packet"]
+
+        transmission_and_queue_latency = processing_start_time - client_timestamp
+
+        classification_start_time = time.time()
+        prediction = self.classifier.get_prediction(packet)
+        classification_end_time = time.time()
+        classification_latency = classification_end_time - classification_start_time
+        total_latency = transmission_and_queue_latency + classification_latency
+
+        if prediction:
+            ...
+
+        self.latencies.append(total_latency)
+        self.processed_packages += 1
         self.acknowledge_message(basic_deliver.delivery_tag)
+        self.check_message_limit()
 
     def acknowledge_message(self, delivery_tag):
         print(f"Acknowledging message {delivery_tag}")
@@ -208,44 +252,13 @@ class AsyncConsumer:
             print("Stopped")
 
 
-class Worker:
-    def __init__(self, url, classifier: PytorchClassifier):
-        self._reconnect_delay = 0
-        self._amqp_url = url
-        self._consumer = AsyncConsumer(self._amqp_url, classifier)
-
-    def run(self):
-        while True:
-            try:
-                self._consumer.run()
-            except KeyboardInterrupt:
-                self._consumer.stop()
-                break
-            self._maybe_reconnect()
-
-    def _maybe_reconnect(self):
-        if self._consumer.should_reconnect:
-            self._consumer.stop()
-            reconnect_delay = self._get_reconnect_delay()
-            print(f"Reconnecting after {reconnect_delay} seconds")
-            time.sleep(reconnect_delay)
-            self._consumer = AsyncConsumer(self._amqp_url, classifier)
-
-    def _get_reconnect_delay(self):
-        if self._consumer.was_consuming:
-            self._reconnect_delay = 0
-        else:
-            self._reconnect_delay += 1
-        if self._reconnect_delay > 30:
-            self._reconnect_delay = 30
-        return self._reconnect_delay
-
-
 if __name__ == "__main__":
     model_path = "data/model.pt"
     scaler_path = "data/scaler.pkl"
     classifier = PytorchClassifier(model_path=model_path, scaler_path=scaler_path)
 
+    worker_name = f"worker-{uuid4()}"
     url = "localhost"
-    consumer = Worker(url, classifier)
+    consumer = Worker(url, classifier, worker_name)
     consumer.run()
+    print(consumer.latencies)
