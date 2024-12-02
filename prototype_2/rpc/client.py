@@ -1,11 +1,12 @@
-import pika
-import pandas as pd
-from pika import channel as ch
+import functools
 import json
 import time
-from rpc.exceptions import ConnectionNotOpenedError, ChannelNotOpenedError
-import functools
+
+import pandas as pd
+import pika
 from pika.exchange_type import ExchangeType
+
+from rpc.exceptions import ChannelNotOpenedError, ConnectionNotOpenedError
 
 
 class ClientRPC:
@@ -29,12 +30,13 @@ class ClientRPC:
 
     def connect(self):
         print(f"Connecting to {self.url}")
-        return pika.SelectConnection(
+        connection = pika.SelectConnection(
             pika.ConnectionParameters(host=self.url),
             on_open_callback=self.on_connection_open,
             on_open_error_callback=self.on_connection_open_error,
             on_close_callback=self.on_connection_closed,
         )
+        return connection
 
     def on_connection_open(self, _connection):
         print("Connection opened")
@@ -167,7 +169,9 @@ class ClientRPC:
             raise ConnectionNotOpenedError()
         if self.message_number >= 100:
             self.stop()
-        self.connection.ioloop.call_later(self.PUBLISH_INTERVAL, self.publish_message)
+        self.connection.ioloop.call_later(
+            self.PUBLISH_INTERVAL, self.publish_message
+        )
 
     def publish_message(self):
         if self.channel is None or not self.channel.is_open:

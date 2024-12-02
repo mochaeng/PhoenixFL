@@ -1,13 +1,14 @@
 import functools
-import time
 import json
-import pika
-import pandas as pd
+import time
 from uuid import uuid4
+
+import pika
 from pika.exchange_type import ExchangeType
 
-from rpc.exceptions import ConnectionNotOpenedError, ChannelNotOpenedError
 from rpc.classifier import PytorchClassifier
+from rpc.exceptions import ChannelNotOpenedError, ConnectionNotOpenedError
+from rpc.stats import write_latencies
 
 
 class Worker:
@@ -37,12 +38,13 @@ class Worker:
 
     def connect(self):
         print(f"Connecting to {self._url}")
-        return pika.SelectConnection(
+        connection = pika.SelectConnection(
             parameters=pika.ConnectionParameters(host=self._url),
             on_open_callback=self.on_connection_open,
             on_open_error_callback=self.on_connection_open_error,
             on_close_callback=self.on_connection_closed,
         )
+        return connection
 
     def close_connection(self):
         self._consuming = False
@@ -148,7 +150,9 @@ class Worker:
         self.add_on_cancel_callback()
         if self._channel is None:
             raise ChannelNotOpenedError()
-        self._consumer_tag = self._channel.basic_consume(self.QUEUE, self.on_message)
+        self._consumer_tag = self._channel.basic_consume(
+            self.QUEUE, self.on_message
+        )
         self.was_consuming = True
         self._consuming = True
 
@@ -164,31 +168,10 @@ class Worker:
             raise ChannelNotOpenedError()
         self._channel.close()
 
-    def write_latencies(self):
-        print("is this funcking shit being called?")
-        latencies_pd = pd.DataFrame(self.latencies, columns=["Latency"])
-        metrics = {
-            "mean": latencies_pd.mean(),
-            "median": latencies_pd.median(),
-            "quatile-75": latencies_pd.quantile(75),
-            "quatile-95": latencies_pd.quantile(95),
-            "quatile-99": latencies_pd.quantile(99),
-        }
-        path = f"data/workers/{self.name}"
-        latencies_pd.to_csv(f"{path}_latencies.csv")
-        with open(f"{path}_metrics.json", "w+") as f:
-            json.dump(metrics, f, indent=4)
-
-    def check_message_limit(self):
-        ...
-        # if self.processed_packages >= 100:
-        #     self.stop()
-        #     self.write_latencies()
-        #     exit(0)
-
     def on_message(self, channel, basic_deliver, properties, body):
-        self.check_message_limit()
-        print(f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}")
+        print(
+            f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}"
+        )
         processing_start_time = time.time()
 
         message = json.loads(body)
@@ -204,12 +187,12 @@ class Worker:
         total_latency = transmission_and_queue_latency + classification_latency
 
         if prediction:
+            # publish to alert_queue
             ...
 
         self.latencies.append(total_latency)
         self.processed_packages += 1
         self.acknowledge_message(basic_deliver.delivery_tag)
-        self.check_message_limit()
 
     def acknowledge_message(self, delivery_tag):
         print(f"Acknowledging message {delivery_tag}")
@@ -235,8 +218,12 @@ class Worker:
         self._channel.close()
 
     def run(self):
-        self._connection = self.connect()
-        self._connection.ioloop.start()
+        try:
+            self._connection = self.connect()
+            self._connection.ioloop.start()
+        except KeyboardInterrupt:
+            print("Ctrl+C detected. Stopping worker...")
+            self.stop()
 
     def stop(self):
         if not self._closing:
@@ -257,8 +244,9 @@ if __name__ == "__main__":
     scaler_path = "data/scaler.pkl"
     classifier = PytorchClassifier(model_path=model_path, scaler_path=scaler_path)
 
-    worker_name = f"worker-{uuid4()}"
+    worker_name = f"worker_{uuid4()}"
     url = "localhost"
     consumer = Worker(url, classifier, worker_name)
     consumer.run()
-    print(consumer.latencies)
+
+    write_latencies(worker_name, consumer.latencies)
