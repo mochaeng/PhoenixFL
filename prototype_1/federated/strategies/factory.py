@@ -1,17 +1,17 @@
-import flwr as fl
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Callable
-from abc import ABC
+
+import flwr as fl
 
 from federated.strategies.common import (
-    FedAvgWithFederatedEvaluation,
-    FedProxWithFederatedEvaluation,
-    FedAdagradWithFederatedEvaluation,
-    FedYogiWithFederatedEvaluation,
-    FedAdamWithFederatedEvaluation,
-    FedMedianWithFederatedEvaluation,
-    FedTrimmedAvgWithFederatedEvaluation,
     FeadAvgPlusWithFederatedEvaluation,
+    FedAdagradWithFederatedEvaluation,
+    FedAdamWithFederatedEvaluation,
+    FedAvgWithFederatedEvaluation,
+    FedMedianWithFederatedEvaluation,
+    FedProxWithFederatedEvaluation,
+    FedTrimmedAvgWithFederatedEvaluation,
+    FedYogiWithFederatedEvaluation,
 )
 
 

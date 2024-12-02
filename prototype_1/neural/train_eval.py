@@ -1,27 +1,29 @@
+import copy
+from typing import Any, Dict, Iterator, Literal, Optional, OrderedDict, Tuple, Union
+
 import torch
 import torch.amp
-from torch.utils.data import DataLoader, TensorDataset
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 from torcheval.metrics import (
     BinaryAccuracy,
+    BinaryF1Score,
     BinaryPrecision,
     BinaryRecall,
-    BinaryF1Score,
 )
-import copy
-from typing import Dict, Iterator, Tuple, Optional, Any, OrderedDict, Union, Literal
+
 from neural.architectures import MLP
 from neural.helpers import (
-    DEVICE,
     CRITERION,
-    get_optimizer,
+    DEVICE,
     calculate_proximal_term,
+    calculate_regularization_degree,
     calculate_regularization_term,
     calculate_sigma_penalty,
-    calculate_regularization_degree,
-    initialize_local_model_for_fedplus,
     check_models_equality,
+    get_optimizer,
+    initialize_local_model_for_fedplus,
 )
 
 TrainingStyle = (

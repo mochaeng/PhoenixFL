@@ -1,14 +1,14 @@
+import argparse
 import os
+import re
 from typing import Tuple
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.figure import Figure
-from result import Ok, Err
-import argparse
-import re
+from result import Err, Ok
 
 from pre_process.pre_process import read_file_as_dict
-
 
 METRICS_PATH = "federated/metrics/"
 CHARTS_PATH = "federated/charts/"

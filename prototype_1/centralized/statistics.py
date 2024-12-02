@@ -1,7 +1,7 @@
 import json
 import os
-from scipy import stats
 
+from scipy import stats
 
 METRICS_PATH = "./prototype_1/centralized/metrics"
 METRICS_FILE_PATH = os.path.join(METRICS_PATH, "metrics.json")

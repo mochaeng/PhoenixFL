@@ -1,13 +1,13 @@
-import pandas as pd
-import numpy as np
-import scipy.stats
-from sklearn.model_selection import train_test_split
-import scipy
-import os
 import argparse
+import os
+
 import dask.dataframe as dd
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
+import scipy
+import scipy.stats
+from sklearn.model_selection import train_test_split
 
 COLUMNS_TO_REMOVE = [
     # "IPV4_SRC_ADDR",

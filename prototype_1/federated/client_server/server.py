@@ -1,13 +1,14 @@
+import argparse
+from typing import List, Tuple
+
 import flwr as fl
 from flwr.common import Metrics, Scalar
-from typing import List, Tuple
-import argparse
 
-from federated.federated_helpers import get_parameters
-from neural.helpers import TRAIN_CONFIG, DEVICE
-from neural.architectures import MLP
-from federated.strategies.factory import create_federated_strategy
 from federated.client_server.client import federated_evaluation_results
+from federated.federated_helpers import get_parameters
+from federated.strategies.factory import create_federated_strategy
+from neural.architectures import MLP
+from neural.helpers import DEVICE, TRAIN_CONFIG
 
 
 def fit_config(server_round: int) -> dict[str, Scalar]:

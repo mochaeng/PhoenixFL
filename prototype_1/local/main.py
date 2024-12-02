@@ -1,12 +1,15 @@
 import argparse
 import json
 
-from local.local_helpers import get_local_loaders, get_eval_test_loader, LocalMetrics
-from pre_process.pre_process import CLIENTS_PATH, BATCH_SIZE
-from neural.helpers import DEVICE, TRAIN_CONFIG
+from local.local_helpers import (
+    LocalMetrics,
+    get_eval_test_loader,
+    get_local_loaders,
+)
 from neural.architectures import MLP
-from neural.train_eval import train, evaluate_model
-
+from neural.helpers import DEVICE, TRAIN_CONFIG
+from neural.train_eval import evaluate_model, train
+from pre_process.pre_process import BATCH_SIZE, CLIENTS_PATH
 
 PATH_TO_SAVE = "local/metrics"
 

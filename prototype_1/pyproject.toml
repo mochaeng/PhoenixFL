@@ -20,15 +20,20 @@ result = "^0.16.1"
 dask = { extras = ["dataframe"], version = "^2024.5.2" }
 overrides = "^7.7.0"
 ipykernel = "^6.29.4"
+ruff = "^0.8.1"
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "basic"
 
+# ruff check . --fix
 [tool.ruff]
-# Exclude the unused import rule
+exclude = [".venv", ".git"]
 ignore = ["F401"]
+line-length = 88
+indent-width = 4
+select = ["I"]
 
 
 [build-system]

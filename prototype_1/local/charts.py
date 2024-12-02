@@ -1,10 +1,10 @@
 import json
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 from typing import Dict
 
-from pre_process.pre_process import CLIENTS_NAMES, CLIENTS_NAMES_CHARTS
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 
+from pre_process.pre_process import CLIENTS_NAMES, CLIENTS_NAMES_CHARTS
 
 TRAIN_LOGS_PATH = "local/metrics/train_logs.json"
 PATH_TO_SAVE_CHARTS = "local/charts/"

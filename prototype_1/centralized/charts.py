@@ -1,8 +1,8 @@
 import json
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.figure import Figure
-
 
 TRAIN_LOGS_PATH = "centralized/metrics/train_logs.json"
 PATH_TO_SAVE_CHARTS = "centralized/charts/"

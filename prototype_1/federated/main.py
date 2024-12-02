@@ -1,26 +1,27 @@
+import argparse
+import json
 import os
+from typing import List, Tuple
+
 import flwr as fl
 from flwr.common import Metrics
 from flwr.server import History
-from typing import List, Tuple
-import json
-import argparse
 
-from pre_process.pre_process import BATCH_SIZE
-from neural.architectures import MLP
-from neural.train_eval import train, evaluate_model
-from neural.helpers import DEVICE, TRAIN_CONFIG, zeroing_parameters
 from federated.federated_helpers import (
+    PATH_TO_METRICS_FOLDER,
+    TOTAL_NUMBER_OF_CLIENTS,
+    FederatedMetrics,
+    eval_config,
+    fit_config,
     get_all_federated_loaders,
     get_parameters,
     set_parameters,
-    TOTAL_NUMBER_OF_CLIENTS,
-    FederatedMetrics,
-    PATH_TO_METRICS_FOLDER,
-    fit_config,
-    eval_config,
 )
 from federated.strategies.factory import create_federated_strategy
+from neural.architectures import MLP
+from neural.helpers import DEVICE, TRAIN_CONFIG, zeroing_parameters
+from neural.train_eval import evaluate_model, train
+from pre_process.pre_process import BATCH_SIZE
 
 
 class FlowerNumPyClient(fl.client.NumPyClient):

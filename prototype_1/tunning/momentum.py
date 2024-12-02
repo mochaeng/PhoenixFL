@@ -1,20 +1,21 @@
-import torch
-import torch.optim as optim
-from skorch import NeuralNetBinaryClassifier
-from sklearn.model_selection import GridSearchCV
 import os
 
-from tunning.helpers import (
-    PopoolaMLP,
-    PATH_TO_SAVE_RESULTS,
-    CENTRALIZED_DATASET_PATH,
-)
+import torch
+import torch.optim as optim
+from sklearn.model_selection import GridSearchCV
+from skorch import NeuralNetBinaryClassifier
+from torch.optim.sgd import SGD
+
 from pre_process.pre_process import (
-    get_standardized_df,
     get_df,
     get_fit_scaler_from_df,
+    get_standardized_df,
 )
-
+from tunning.helpers import (
+    CENTRALIZED_DATASET_PATH,
+    PATH_TO_SAVE_RESULTS,
+    PopoolaMLP,
+)
 
 if __name__ == "__main__":
     mlp_architecture = "popoola"
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     param_grid = {
         "batch_size": [64, 128, 512, 1024],
         "lr": [0.1, 0.02, 0.0001],
-        "optimizer": [optim.SGD],
+        "optimizer": [SGD],
         "optimizer__momentum": [0.0, 0.6, 0.9],
         "optimizer__weight_decay": [0.01, 0.001, 0.0001],
     }
@@ -42,7 +43,9 @@ if __name__ == "__main__":
     grid_result = grid.fit(X, y)  # type: ignore
 
     print(f"Best: {grid_result.best_score_} using {grid_result.best_params_}")
-    result += f"Best: {grid_result.best_score_} using {grid_result.best_params_}\n\n"
+    result += (
+        f"Best: {grid_result.best_score_} using {grid_result.best_params_}\n\n"
+    )
 
     means = grid_result.cv_results_["mean_test_score"]
     stds = grid_result.cv_results_["std_test_score"]

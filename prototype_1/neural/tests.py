@@ -1,21 +1,21 @@
 import unittest
+
+import pandas as pd
 import torch
+from helpers import DEVICE, MLP, get_train_and_test_loaders
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from torcheval.metrics import (
     BinaryAccuracy,
+    BinaryF1Score,
     BinaryPrecision,
     BinaryRecall,
-    BinaryF1Score,
 )
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-
-from .architectures import PopoolaMLP, DEVICE, get_train_and_test_loaders, MLP
 
 
 def _load_eval_loader():
     data = _get_data()
-    _, eval_loader, _ = get_train_and_test_loaders(data, batch_size=32)
+    _, eval_loader = get_train_and_test_loaders(data, batch_size=32)
     return eval_loader
 
 
@@ -58,7 +58,7 @@ class MetricsTests(unittest.TestCase):
         methodName: str = "runTest",
     ) -> None:
         super().__init__(methodName)
-        self.net = PopoolaMLP().to(DEVICE)
+        self.net = MLP().to(DEVICE)
         self.eval_loader = _load_eval_loader()
 
     def test_accuracy(self):

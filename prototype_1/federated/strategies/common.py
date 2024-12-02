@@ -1,19 +1,18 @@
+from typing import Callable, Dict, List, Optional, Tuple, Union
+
 import flwr as fl
 from flwr.common import (
     EvaluateRes,
+    FitIns,
     MetricsAggregationFn,
+    NDArrays,
     Parameters,
     Scalar,
-    NDArrays,
-    FitIns,
 )
+from flwr.common.typing import Metrics
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
-from flwr.common.typing import Metrics
-from flwr.server.client_proxy import ClientProxy
 from overrides import override
-from typing import Callable, Dict, List, Tuple, Optional, Union
-
 
 FederatedEvalutionDataFn = Callable[[int, List[Tuple[int, Metrics]]], None]
 FederatedEvalutionForFedPlusDataFn = Callable[[int, List[Tuple[str, Metrics]]], None]

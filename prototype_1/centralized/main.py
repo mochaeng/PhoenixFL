@@ -1,27 +1,26 @@
 import argparse
 import json
-import joblib
 import os
+
+import joblib
 import torch
 
-from pre_process.pre_process import (
-    CLIENTS_PATH,
-    get_df,
-    get_standardized_df,
-    get_prepared_data_for_loader,
-    BATCH_SIZE,
-    PATH_SCALER,
-)
-from neural.train_eval import train, evaluate_model
-from neural.helpers import TRAIN_CONFIG, get_test_loader, DEVICE
-from neural.architectures import MLP
-
 from centralized.centralized_helpers import (
-    print_headers,
-    get_centralized_data,
     CentralizedMetrics,
+    get_centralized_data,
+    print_headers,
 )
-
+from neural.architectures import MLP
+from neural.helpers import DEVICE, TRAIN_CONFIG, get_test_loader
+from neural.train_eval import evaluate_model, train
+from pre_process.pre_process import (
+    BATCH_SIZE,
+    CLIENTS_PATH,
+    PATH_SCALER,
+    get_df,
+    get_prepared_data_for_loader,
+    get_standardized_df,
+)
 
 PATH_TO_SAVE = "centralized/metrics"
 PATH_TO_MODELS = "datasets/data-for-prototype-02"

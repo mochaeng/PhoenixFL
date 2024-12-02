@@ -1,11 +1,13 @@
-import torch
-import torch.amp
-from torch.utils.data import DataLoader, TensorDataset
-import torch.nn as nn
 from typing import Dict, Iterator, Tuple
 
-from neural.architectures import MLP
+import torch
+import torch.amp
+import torch.nn as nn
+from torch.optim.adamw import AdamW
+from torch.optim.sgd import SGD
+from torch.utils.data import DataLoader, TensorDataset
 
+from neural.architectures import MLP
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CRITERION = torch.nn.BCEWithLogitsLoss
@@ -22,7 +24,9 @@ TRAIN_CONFIG = {
 }
 
 
-def get_train_and_test_loaders(data: Dict, batch_size) -> Tuple[DataLoader, DataLoader]:
+def get_train_and_test_loaders(
+    data: Dict, batch_size
+) -> Tuple[DataLoader, DataLoader]:
     x_train_tensor = torch.tensor(data["x_train"], dtype=torch.float32)
     y_train_tensor = torch.tensor(data["y_train"], dtype=torch.float32).view(-1, 1)
     x_test_tensor = torch.tensor(data["x_test"], dtype=torch.float32)
@@ -51,7 +55,9 @@ def calculate_proximal_term(
     local_model: nn.Module, global_params: Iterator[nn.Parameter]
 ):
     proximal_term = 0
-    for local_weights, global_weights in zip(local_model.parameters(), global_params):
+    for local_weights, global_weights in zip(
+        local_model.parameters(), global_params
+    ):
         proximal_term += (local_weights - global_weights).norm(2)
     return proximal_term
 
@@ -111,13 +117,13 @@ def get_parameters_as_tensor(model: nn.Module) -> torch.Tensor:
 
 def get_optimizer(name, net, train_config):
     if name == "adam":
-        return torch.optim.AdamW(  # type: ignore
+        return AdamW(
             net.parameters(),
             lr=train_config["lr"],
             weight_decay=train_config["weight_decay"],
         )
     else:
-        return torch.optim.SGD(  # type: ignore
+        return SGD(
             net.parameters(),
             lr=train_config["lr"],
             momentum=train_config["momentum"],

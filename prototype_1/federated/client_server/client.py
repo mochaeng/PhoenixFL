@@ -1,19 +1,20 @@
-import torch.nn as nn
-import flwr as fl
 import argparse
-from federated.federated_helpers import FederatedMetrics
 import os
 
-from pre_process.pre_process import BATCH_SIZE
-from prototype_1.neural.train_eval import train, evaluate_model
-from neural.helpers import DEVICE
-from neural.architectures import MLP
+import flwr as fl
+import torch.nn as nn
+
 from federated.federated_helpers import (
+    FederatedMetrics,
     get_all_federated_loaders,
-    set_parameters,
-    get_parameters,
     get_centralized_test_loader,
+    get_parameters,
+    set_parameters,
 )
+from neural.architectures import MLP
+from neural.helpers import DEVICE
+from neural.train_eval import evaluate_model, train
+from pre_process.pre_process import BATCH_SIZE
 
 RESULTS_FOLDER_PATH = "federated/client_server/results"
 
@@ -37,7 +38,9 @@ def federated_evaluation_results(server_round, metrics) -> None:
 
 
 class Client(fl.client.NumPyClient):
-    def __init__(self, cid, name, train_loader, eval_loader, centralized_eval_loader):
+    def __init__(
+        self, cid, name, train_loader, eval_loader, centralized_eval_loader
+    ):
         self.cid = cid
         self.name = name
         self.net: nn.Module

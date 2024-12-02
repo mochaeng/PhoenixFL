@@ -1,22 +1,23 @@
-from flwr.common import Scalar
+import os
+from collections import OrderedDict
+from typing import Dict, List, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
+from flwr.common import Scalar
 from torch.utils.data import DataLoader
-import numpy as np
-import os
-from typing import Tuple, List, Dict
-from collections import OrderedDict
 
-from neural.helpers import get_train_and_test_loaders, TRAIN_CONFIG, get_test_loader
+from neural.helpers import TRAIN_CONFIG, get_test_loader, get_train_and_test_loaders
 from pre_process.pre_process import (
-    get_standardized_train_test_data,
     CLIENTS_PATH,
-    get_train_and_test_dfs,
-    get_prepared_data_for_loader,
     DATASETS_PATHS,
     ScalerType,
     get_df,
+    get_prepared_data_for_loader,
     get_standardized_df,
+    get_standardized_train_test_data,
+    get_train_and_test_dfs,
 )
 
 TOTAL_NUMBER_OF_CLIENTS = 3
