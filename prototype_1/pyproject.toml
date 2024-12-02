@@ -21,6 +21,15 @@ dask = { extras = ["dataframe"], version = "^2024.5.2" }
 overrides = "^7.7.0"
 ipykernel = "^6.29.4"
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+
+[tool.ruff]
+# Exclude the unused import rule
+ignore = ["F401"]
+
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from typing import Dict, List, Tuple, Union
-from result import Result, Ok, Err
 import json
 import os
+from typing import Dict, List, Tuple, Union
 
+import numpy as np
+import pandas as pd
+from result import Err, Ok, Result
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
 PATH_CENTRALIZED_MODEL = "prototype_1/centralized/models/centralized-model.pth"
 PATH_SCALER = "datasets/data-for-prototype-02/"
@@ -62,8 +62,10 @@ DataType = np.ndarray
 BATCH_SIZE = 512
 
 
-def get_df(path: str) -> pd.DataFrame:
-    df = pd.read_parquet(path, engine="pyarrow").drop(columns=COLUMNS_TO_REMOVE)
+def get_df(path: str, is_drop: bool = True) -> pd.DataFrame:
+    df = pd.read_parquet(path, engine="pyarrow")
+    if is_drop:
+        return df.drop(columns=COLUMNS_TO_REMOVE)
     return df
 
 
