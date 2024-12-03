@@ -8,6 +8,7 @@ from pika.exchange_type import ExchangeType
 
 from rpc.classifier import PytorchClassifier
 from rpc.exceptions import ChannelNotOpenedError, ConnectionNotOpenedError
+from rpc.helpers import PublishRequest
 from rpc.stats import write_latencies
 
 
@@ -150,9 +151,7 @@ class Worker:
         self.add_on_cancel_callback()
         if self._channel is None:
             raise ChannelNotOpenedError()
-        self._consumer_tag = self._channel.basic_consume(
-            self.QUEUE, self.on_message
-        )
+        self._consumer_tag = self._channel.basic_consume(self.QUEUE, self.on_message)
         self.was_consuming = True
         self._consuming = True
 
@@ -169,14 +168,13 @@ class Worker:
         self._channel.close()
 
     def on_message(self, channel, basic_deliver, properties, body):
-        print(
-            f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}"
-        )
+        print(f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}")
         processing_start_time = time.time()
 
-        message = json.loads(body)
-        client_timestamp = float(message["timestamp"])
+        message: PublishRequest = json.loads(body)
+        client_timestamp = float(message["send_timestamp"])
         packet = message["packet"]
+        metadata = message["metadata"]
 
         transmission_and_queue_latency = processing_start_time - client_timestamp
 

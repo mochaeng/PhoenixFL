@@ -4,9 +4,12 @@ import time
 
 import pandas as pd
 import pika
+from pandas.core.interchange.dataframe_protocol import Column
+from pandas.core.series import Series
 from pika.exchange_type import ExchangeType
 
 from rpc.exceptions import ChannelNotOpenedError, ConnectionNotOpenedError
+from rpc.helpers import COLUMNS_TO_REMOVE, Metadata, PublishRequest
 
 
 class ClientRPC:
@@ -16,13 +19,13 @@ class ClientRPC:
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
-    def __init__(self, amqp_url: str, packets: list):
+    def __init__(self, amqp_url: str, packets: pd.DataFrame):
         self.url = amqp_url
         self.packets = packets
-        self.current_packet = 0
         self.connection = None
         self.channel = None
         self.deliveries = {}
+        self.current_packet = 0
         self.acked = 0
         self.nacked = 0
         self.message_number = 0
@@ -169,25 +172,31 @@ class ClientRPC:
             raise ConnectionNotOpenedError()
         if self.message_number >= 100:
             self.stop()
-        self.connection.ioloop.call_later(
-            self.PUBLISH_INTERVAL, self.publish_message
-        )
+        self.connection.ioloop.call_later(self.PUBLISH_INTERVAL, self.publish_message)
 
     def publish_message(self):
         if self.channel is None or not self.channel.is_open:
             return
 
-        properties = pika.BasicProperties(content_type="application/json")
-        packet = self.packets[self.current_packet % len(self.packets)]
-        self.current_packet += 1
-        data = {"timestamp": str(time.time()), "packet": packet, "ip": ""}
+        packet = self.packets.iloc[self.current_packet % len(self.packets)]
+        metadata = packet[COLUMNS_TO_REMOVE].to_dict()
+        packet = packet.drop(COLUMNS_TO_REMOVE).to_dict()
+
+        data: PublishRequest = {
+            "send_timestamp": str(time.time()),
+            "metadata": metadata,
+            "packet": packet,
+        }
         message = json.dumps(data).encode()
+
         self.channel.basic_publish(
             exchange=self.EXCHANGE,
             routing_key=self.ROUTING_KEY,
             body=message,
-            properties=properties,
+            properties=pika.BasicProperties(content_type="application/json"),
         )
+
+        self.current_packet += 1
         self.message_number += 1
         self.deliveries[self.message_number] = True
         print(f"Published message # {self.message_number}")
@@ -230,11 +239,9 @@ class ClientRPC:
 
 if __name__ == "__main__":
     packets_df = pd.read_csv(
-        "data/100_packets.csv",
-        index_col=0,
-        usecols=lambda column: column != "Label",
+        "data/10_000-raw-packets.csv",
+        usecols=lambda column: column != "Attack" and column != "Label",
     )
-    packets = packets_df.to_dict(orient="records")
 
-    client = ClientRPC("localhost", packets)
+    client = ClientRPC("localhost", packets_df)
     client.run()
