@@ -14,10 +14,21 @@ scikit-learn = "^1.5.1"
 torch = "^2.4.0"
 joblib = "^1.4.2"
 pandas = "^2.2.3"
+ruff = "^0.8.1"
+
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+
+# ruff check . --fix
+[tool.ruff]
+exclude = [".venv", ".git"]
+lint.select = ["I"]
+lint.ignore = ["F401"]
+line-length = 88
+indent-width = 4
 
 
 [build-system]
