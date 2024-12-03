@@ -1,5 +1,6 @@
 import functools
 import json
+import signal
 import time
 
 import pandas as pd
@@ -20,6 +21,8 @@ class ClientRPC:
     ROUTING_KEY = QUEUE
 
     def __init__(self, amqp_url: str, packets: pd.DataFrame):
+        signal.signal(signal.SIGINT, self.handle_interrupt)
+
         self.url = amqp_url
         self.packets = packets
         self.connection = None
@@ -30,6 +33,10 @@ class ClientRPC:
         self.nacked = 0
         self.message_number = 0
         self.stopping = False
+
+    def handle_interrupt(self, signum, _frame):
+        print(f"Received signal {signum}. Stopping the client...")
+        self.stop()
 
     def connect(self):
         print(f"Connecting to {self.url}")
@@ -170,8 +177,8 @@ class ClientRPC:
         print(f"Scheduling next message for {self.PUBLISH_INTERVAL} seconds")
         if self.connection is None:
             raise ConnectionNotOpenedError()
-        if self.message_number >= 100:
-            self.stop()
+        # if self.message_number >= 100:
+        #     self.stop()
         self.connection.ioloop.call_later(self.PUBLISH_INTERVAL, self.publish_message)
 
     def publish_message(self):

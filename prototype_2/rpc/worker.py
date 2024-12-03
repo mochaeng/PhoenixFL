@@ -1,5 +1,6 @@
 import functools
 import json
+import signal
 import time
 from uuid import uuid4
 
@@ -19,6 +20,8 @@ class Worker:
     ROUTING_KEY = QUEUE
 
     def __init__(self, amqp_url, classifier: PytorchClassifier, name: str):
+        signal.signal(signal.SIGINT, self.handle_interrupt)
+
         self.should_reconnect = False
         self.was_consuming = False
 
@@ -36,6 +39,10 @@ class Worker:
         self.processed_packages = 0
         self.latencies: list[float] = []
         self.name = name
+
+    def handle_interrupt(self, signum, _frame):
+        print(f"Received signal {signum}. Stopping the wroker...")
+        self.stop()
 
     def connect(self):
         print(f"Connecting to {self._url}")
@@ -231,7 +238,7 @@ class Worker:
                 raise ConnectionNotOpenedError()
             if self._consuming:
                 self.stop_consuming()
-                self._connection.ioloop.start()
+                # self._connection.ioloop.start()
             else:
                 self._connection.ioloop.stop()
             print("Stopped")
