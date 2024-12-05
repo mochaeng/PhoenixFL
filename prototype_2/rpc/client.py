@@ -16,7 +16,7 @@ from rpc.helpers import COLUMNS_TO_REMOVE, Metadata, PublishRequest
 class ClientRPC:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
-    PUBLISH_INTERVAL = 0.001
+    PUBLISH_INTERVAL = 0
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
