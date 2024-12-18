@@ -4,6 +4,7 @@ import signal
 import time
 from uuid import uuid4
 
+from pandas.core.window.expanding import Literal
 import pika
 from pika.exchange_type import ExchangeType
 
@@ -16,8 +17,8 @@ from rpc.stats import write_latencies
 class Worker:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
-    QUEUE = "requests_queue"
-    ROUTING_KEY = QUEUE
+    REQUESTS_QUEUE = "requests_queue"
+    ALERTS_QUEUE = "alerts_queue"
 
     def __init__(self, amqp_url, classifier: PytorchClassifier, name: str):
         signal.signal(signal.SIGINT, self.handle_interrupt)
@@ -31,9 +32,7 @@ class Worker:
         self._consumer_tag = None
         self._url = amqp_url
         self._consuming = False
-        # In production, experiment with higher prefetch values
-        # for higher consumer throughput
-        self._prefetch_count = 2
+        self._prefetch_count = 2  # high values for higher consumer throughput
         self.classifier = classifier
 
         self.processed_packages = 0
@@ -96,7 +95,7 @@ class Worker:
         print("Channel opened")
         self._channel = channel
         self.add_on_channel_close_callback()
-        self.setup_exchange(self.EXCHANGE)
+        self.setup_exchanges(self.EXCHANGE)
 
     def add_on_channel_close_callback(self):
         print("Adding channel close callback")
@@ -108,7 +107,7 @@ class Worker:
         print(f"Channel {channel} was closed: {reason}")
         self.close_connection()
 
-    def setup_exchange(self, exchange_name):
+    def setup_exchanges(self, exchange_name):
         print(f"Declaring exchange: {exchange_name}")
         cb = functools.partial(self.on_exchange_declareok, userdata=exchange_name)
         if self._channel is None:
@@ -119,23 +118,24 @@ class Worker:
 
     def on_exchange_declareok(self, _frame, userdata):
         print(f"Exchange declared: {userdata}")
-        self.setup_queue(self.QUEUE)
+        self.setup_queues([self.REQUESTS_QUEUE, self.ALERTS_QUEUE])
 
-    def setup_queue(self, queue_name):
-        print(f"Declaring queue {queue_name}")
-        cb = functools.partial(self.on_queue_declareok, userdata=queue_name)
-        if self._channel is None:
-            raise ChannelNotOpenedError()
-        self._channel.queue_declare(queue=queue_name, callback=cb, durable=True)
+    def setup_queues(self, queue_names: list[str]):
+        for queue_name in queue_names:
+            print(f"Declaring queue {queue_name}")
+            cb = functools.partial(self.on_queue_declareok, userdata=queue_name)
+            if self._channel is None:
+                raise ChannelNotOpenedError()
+            self._channel.queue_declare(queue=queue_name, callback=cb, durable=True)
 
     def on_queue_declareok(self, _frame, userdata):
         queue_name = userdata
-        print(f"Binding {self.EXCHANGE} to {queue_name} with {self.ROUTING_KEY}")
+        print(f"Binding {self.EXCHANGE} to {queue_name} with {queue_name} as routing key")
         cb = functools.partial(self.on_bindok, userdata=queue_name)
         if self._channel is None:
             raise ChannelNotOpenedError()
         self._channel.queue_bind(
-            queue_name, self.EXCHANGE, routing_key=self.ROUTING_KEY, callback=cb
+            queue_name, self.EXCHANGE, routing_key=queue_name, callback=cb
         )
 
     def on_bindok(self, _frame, userdata):
@@ -158,7 +158,7 @@ class Worker:
         self.add_on_cancel_callback()
         if self._channel is None:
             raise ChannelNotOpenedError()
-        self._consumer_tag = self._channel.basic_consume(self.QUEUE, self.on_message)
+        self._consumer_tag = self._channel.basic_consume(self.REQUESTS_QUEUE, self.on_message)
         self.was_consuming = True
         self._consuming = True
 
@@ -186,14 +186,30 @@ class Worker:
         transmission_and_queue_latency = processing_start_time - client_timestamp
 
         classification_start_time = time.time()
-        prediction = self.classifier.get_prediction(packet)
+        isMalicious = self.classifier.predict_is_positive_binary(packet)
         classification_end_time = time.time()
         classification_latency = classification_end_time - classification_start_time
         total_latency = transmission_and_queue_latency + classification_latency
 
-        if prediction:
-            # publish to alert_queue
-            ...
+        classified_packet = {
+            "metadata": metadata,
+            "classification_time": classification_latency,
+            "total_time": total_latency,
+            "worker_name": self.name,
+            "is_malicious": isMalicious,
+        }
+
+        def publish_to_alerts():
+            if self._channel is not None and self._channel.is_open:
+                self._channel.basic_publish(
+                    exchange=self.EXCHANGE,
+                    routing_key=self.ALERTS_QUEUE,
+                    body=json.dumps(classified_packet),
+                    properties=pika.BasicProperties(content_type="application/json")
+                )
+
+        if self._connection is not None:
+            self._connection.ioloop.add_callback_threadsafe(publish_to_alerts)
 
         self.latencies.append(total_latency)
         self.processed_packages += 1

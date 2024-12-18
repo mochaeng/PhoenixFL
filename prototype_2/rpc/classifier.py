@@ -9,7 +9,7 @@ class PytorchClassifier:
         self.model: torch.nn.Module = torch.jit.load(model_path)
         self.scaler: MinMaxScaler = joblib.load(scaler_path)
 
-    def get_prediction(self, data: dict):
+    def predict_is_positive_binary(self, data: dict):
         values_from_features = [value for _, value in data.items()]
         values = np.array([values_from_features])
         scaled_values = self.scaler.transform(values)
@@ -17,4 +17,4 @@ class PytorchClassifier:
         self.model.eval()
         output = self.model(tensor_values)
         prediction = torch.round(torch.sigmoid(output))
-        return prediction.item()
+        return prediction.item() == 1.0
