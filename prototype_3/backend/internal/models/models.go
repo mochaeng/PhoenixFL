@@ -1,13 +1,14 @@
 package models
 
 type MetadataResponse struct {
-	SourceIpAddr  string `json:"IPV4_SRC_ADDR"`
-	SourcePortNum int    `json:"L4_SRC_PORT"`
-	DestIpAddr    string `json:"IPV4_DST_ADDR"`
-	DestPortNum   int    `json:"L4_DST_PORT"`
+	SourceIpAddr  string `json:"ipv4_src_addr"`
+	SourcePortNum int    `json:"l4_src_port"`
+	DestIpAddr    string `json:"ipv4_dst_addr"`
+	DestPortNum   int    `json:"l4_dst_port"`
 }
 
 type ClassifiedPacketResponse struct {
+	ID                 string           `json:"id"`
 	Metadata           MetadataResponse `json:"metadata"`
 	ClassificationTime float64          `json:"classification_time"`
 	TotalTime          float64          `json:"total_time"`

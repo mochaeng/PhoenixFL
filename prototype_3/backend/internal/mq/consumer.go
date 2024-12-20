@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/mochaeng/phoenixfl/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -81,8 +82,6 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 	}
 
 	for d := range msgs {
-		log.Printf("Received a message: %s", d.Body)
-
 		var packet models.ClassifiedPacketResponse
 		err := json.Unmarshal([]byte(d.Body), &packet)
 		if err != nil {
@@ -90,6 +89,8 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 			d.Nack(false, true)
 			continue
 		}
+		packet.ID = uuid.NewString()
+		log.Printf("Received a message: %+v\n", packet)
 		packetsChan <- packet
 		d.Ack(false)
 	}
