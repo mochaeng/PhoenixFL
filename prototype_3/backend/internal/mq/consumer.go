@@ -1,4 +1,4 @@
-package consumer
+package mq
 
 import (
 	"encoding/json"
@@ -23,14 +23,13 @@ func ConnectToRabbitMQ() (*amqp.Connection, *amqp.Channel) {
 }
 
 func GetAlertsQueue(ch *amqp.Channel) (*amqp.Queue, error) {
-	err := ch.ExchangeDeclare(
-		"packets", // name
-		"direct",  // type
-		true,      // durable
-		false,     // auto-deleted
-		false,     // internal
-		false,     // no-wait
-		nil,       // arguments
+	err := ch.ExchangeDeclare("packets", // name
+		"direct", // type
+		true,     // durable
+		false,    // auto-deleted
+		false,    // internal
+		false,    // no-wait
+		nil,      // arguments
 	)
 	if err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func GetAlertsQueue(ch *amqp.Channel) (*amqp.Queue, error) {
 	return &q, nil
 }
 
-func ConsumeAlertMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan models.ClassifiedPacketResponse) error {
+func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan models.ClassifiedPacketResponse) error {
 	msgs, err := ch.Consume(
 		queue.Name, // queue
 		"",         // consumer

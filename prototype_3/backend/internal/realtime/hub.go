@@ -1,4 +1,4 @@
-package hub
+package realtime
 
 import (
 	"log"
@@ -8,23 +8,18 @@ import (
 	"github.com/mochaeng/phoenixfl/internal/models"
 )
 
-type WebSocketClient struct {
-	Conn        *websocket.Conn
-	PacketsChan chan models.ClassifiedPacketResponse
-}
-
-type ClientsHub struct {
-	clients map[string]*WebSocketClient
+type Hub struct {
+	clients map[string]*Client
 	mu      sync.RWMutex
 }
 
-func NewClientsHub() *ClientsHub {
-	return &ClientsHub{
-		clients: make(map[string]*WebSocketClient),
+func NewClientsHub() *Hub {
+	return &Hub{
+		clients: make(map[string]*Client),
 	}
 }
 
-func (hub *ClientsHub) Add(clientID string, conn *websocket.Conn) {
+func (hub *Hub) Add(clientID string, conn *websocket.Conn) {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 
@@ -33,13 +28,13 @@ func (hub *ClientsHub) Add(clientID string, conn *websocket.Conn) {
 		return
 	}
 
-	hub.clients[clientID] = &WebSocketClient{
+	hub.clients[clientID] = &Client{
 		Conn:        conn,
 		PacketsChan: make(chan models.ClassifiedPacketResponse),
 	}
 }
 
-func (hub *ClientsHub) Remove(clientID string) {
+func (hub *Hub) Remove(clientID string) {
 	hub.mu.Lock()
 	defer hub.mu.Unlock()
 
@@ -53,14 +48,14 @@ func (hub *ClientsHub) Remove(clientID string) {
 	delete(hub.clients, clientID)
 }
 
-func (hub *ClientsHub) Get(clientID string) (*WebSocketClient, bool) {
+func (hub *Hub) Get(clientID string) (*Client, bool) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 	client, exists := hub.clients[clientID]
 	return client, exists
 }
 
-func (hub *ClientsHub) BroadcastPacket(packet models.ClassifiedPacketResponse) {
+func (hub *Hub) broadcastPacket(packet models.ClassifiedPacketResponse) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
@@ -70,9 +65,13 @@ func (hub *ClientsHub) BroadcastPacket(packet models.ClassifiedPacketResponse) {
 		default:
 			log.Printf("client %s is not able to receive the packet at the moment\n", clientID)
 		}
-		// err := conn.WriteJSON(message)
-		// if err != nil {
-		// 	log.Printf("failed to send message to client %v: %v\n", clientID, err)
-		// }
 	}
+}
+
+func (hub *Hub) StartPacketsBroadCastLoop(packetsChan <-chan models.ClassifiedPacketResponse) {
+	go func() {
+		for packet := range packetsChan {
+			hub.broadcastPacket(packet)
+		}
+	}()
 }
