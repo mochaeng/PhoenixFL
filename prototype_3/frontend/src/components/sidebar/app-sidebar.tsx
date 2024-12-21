@@ -14,9 +14,9 @@ import {
   SquareTerminal,
 } from "lucide-react";
 import { NavMain } from "./nav-main";
-import { TeamSwitcher } from "./team-switcher";
 import { NavUser } from "./nav-user";
 import { NavHistory } from "./nav-history";
+import { PlanSwitcher } from "./plan-switcher";
 
 const data = {
   user: {
@@ -25,7 +25,7 @@ const data = {
     avatar:
       "https://i.pinimg.com/736x/4e/18/76/4e187641fd96baa75eac4baf3cdb7d7b.jpg",
   },
-  teams: [
+  plans: [
     {
       name: "Phoenix FL",
       logo: GalleryVerticalEnd,
@@ -51,19 +51,19 @@ const data = {
       items: [
         {
           title: "Overview",
-          url: "#",
+          url: "/dashboard/overview",
         },
         {
           title: "Most recent",
-          url: "#",
+          url: "/dashboard/recent",
         },
         {
           title: "Malicious activity",
-          url: "#",
+          url: "/dashboard/malicious",
         },
         {
           title: "System performance",
-          url: "#",
+          url: "/dashboard/performance",
         },
       ],
     },
@@ -82,7 +82,7 @@ const data = {
   historical: [
     {
       name: "Search",
-      url: "#",
+      url: "/historical/search",
       icon: Search,
     },
     {
@@ -97,7 +97,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <PlanSwitcher plans={data.plans} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

@@ -13,9 +13,9 @@ export const usePacketStore = create<PacketStore>()((set) => ({
   packets: [],
   addPacket: (packet) =>
     set((state) => {
-      const updatedPackets = [...state.packets, packet];
+      const updatedPackets = [packet, ...state.packets];
       if (updatedPackets.length > SizeThreshold) {
-        updatedPackets.shift();
+        updatedPackets.pop();
       }
       return {
         packets: updatedPackets,
