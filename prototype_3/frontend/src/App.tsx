@@ -1,5 +1,9 @@
 import "./App.css";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
 import ErrorPage from "./pages/error-page";
 import RootLayout from "./pages/root-layout";
 
@@ -11,9 +15,25 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
-      // { index: true, element: <HomePage /> },
-      // { path: ":username", element: <ProfilePage /> },
-      // { path: "posts" },
+      { index: true, element: <Navigate to="/dashboard/home" replace /> },
+      {
+        path: "dashboard",
+        // element: <DashboardLayout />,
+        children: [
+          { index: true, element: <Navigate to="home" replace /> },
+          { path: "home", element: <div>Home</div> },
+          { path: "overview", element: <div>Overview</div> },
+          { path: "recent", element: <div>Recent</div> },
+          { path: "performance", element: <div>Performance</div> },
+        ],
+      },
+      {
+        path: "history",
+        children: [
+          { index: true, element: <Navigate to="search" replace /> },
+          { path: "search", element: <div>Search</div> },
+        ],
+      },
     ],
   },
 ]);
