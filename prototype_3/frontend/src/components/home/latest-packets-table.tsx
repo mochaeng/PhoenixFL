@@ -7,8 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePacketStore } from "@/hooks/use-packet-store";
 import { formatSeconds } from "@/lib/utils";
+import { usePacketStore } from "@/store/packet";
 
 export function LatestPacketsTable() {
   const packets = usePacketStore((state) => state.packets);

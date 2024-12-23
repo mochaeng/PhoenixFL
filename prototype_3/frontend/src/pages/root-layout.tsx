@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Outlet } from "react-router-dom";
 import { HeaderBreadcrumb } from "@/components/header-breadcrumb";
-import { PacketStoreProvider } from "@/store/packet-provider";
 import { WebsocketListener } from "@/components/websocket-listener";
 import React from "react";
 import { WebsocketStatus } from "@/components/websocket-status";
@@ -30,13 +29,13 @@ function RootLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="px-4">
-        <PacketStoreProvider>
-          <Header />
-          <WebsocketListener />
-          <div className="flex justify-center bg-rose-50">
-            <Outlet />
-          </div>
-        </PacketStoreProvider>
+        {/* <PacketStoreProvider> */}
+        <Header />
+        <WebsocketListener />
+        <div className="flex justify-center bg-rose-50">
+          <Outlet />
+        </div>
+        {/* </PacketStoreProvider> */}
       </SidebarInset>
     </SidebarProvider>
   );

@@ -1,4 +1,4 @@
-import { usePacketStore } from "@/hooks/use-packet-store";
+import { usePacketStore } from "@/store/packet";
 import React from "react";
 
 export function WebsocketStatus({

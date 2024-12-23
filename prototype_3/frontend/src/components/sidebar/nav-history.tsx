@@ -6,6 +6,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { NavLink, useLocation } from "react-router-dom";
 
 export function NavHistory({
   data: historical,
@@ -16,17 +17,22 @@ export function NavHistory({
     icon: LucideIcon;
   }[];
 }) {
+  const location = useLocation();
+
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Historical data</SidebarGroupLabel>
       <SidebarMenu>
         {historical.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url}>
+            <SidebarMenuButton
+              asChild
+              isActive={location.pathname === item.url}
+            >
+              <NavLink to={item.url}>
                 <item.icon />
-                <span>{item.name}</span>
-              </a>
+                {item.name}
+              </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}

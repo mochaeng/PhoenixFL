@@ -1,5 +1,5 @@
-import { usePacketStore } from "@/hooks/use-packet-store";
 import { PacketSchema } from "@/lib/responses";
+import { usePacketStore } from "@/store/packet";
 import { useEffect } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 

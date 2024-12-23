@@ -6,8 +6,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "../ui/separator";
-import { usePacketStore } from "@/hooks/use-packet-store";
 import { formatMaliciousPercentage } from "@/lib/utils";
+import { usePacketStore } from "@/store/packet";
 
 export function MainStatsCards() {
   const totalCount = usePacketStore((state) => state.totalCount);
@@ -15,6 +15,8 @@ export function MainStatsCards() {
   const maliciousPercentage = formatMaliciousPercentage(
     totalMalicious / totalCount,
   );
+
+  console.log(totalCount);
 
   const data = [
     {
