@@ -15,6 +15,7 @@ export function WebsocketListener() {
     reconnectAttempts: 10,
     reconnectInterval: (attemptNumber) =>
       Math.min(Math.pow(2, attemptNumber) * 1000, 10000),
+    share: true,
   });
 
   const addPacket = usePacketStore((state) => state.addPacket);

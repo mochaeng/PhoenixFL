@@ -95,7 +95,7 @@ const data = {
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar side="left" collapsible="icon" variant="inset">
       <SidebarHeader>
         <PlanSwitcher plans={data.plans} />
       </SidebarHeader>

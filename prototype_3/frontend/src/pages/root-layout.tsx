@@ -10,6 +10,7 @@ import { HeaderBreadcrumb } from "@/components/header-breadcrumb";
 import { PacketStoreProvider } from "@/store/packet-provider";
 import { WebsocketListener } from "@/components/websocket-listener";
 import React from "react";
+import { WebsocketStatus } from "@/components/websocket-status";
 
 const Header = React.memo(function Header() {
   return (
@@ -19,6 +20,7 @@ const Header = React.memo(function Header() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <HeaderBreadcrumb />
       </div>
+      <WebsocketStatus className="flex flex-1 justify-end text-sm" />
     </header>
   );
 });
@@ -28,10 +30,10 @@ function RootLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="px-4">
-        <Header />
         <PacketStoreProvider>
+          <Header />
           <WebsocketListener />
-          <div className="">
+          <div className="flex justify-center bg-rose-50">
             <Outlet />
           </div>
         </PacketStoreProvider>

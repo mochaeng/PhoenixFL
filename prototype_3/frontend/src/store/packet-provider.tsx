@@ -11,7 +11,6 @@ export type PacketStore = {
   totalCount: number;
   totalMalicious: number;
   addPacket: (packet: PacketResponse) => void;
-  clearPackets: () => void;
   setConnectionStatus: (status: string) => void;
 };
 
@@ -36,14 +35,11 @@ export function PacketStoreProvider({
           }
           return {
             packets: updatedPackets,
-            totalCount: state.totalCount + 1,
-            totalMalicious: packet.is_malicious
-              ? state.totalMalicious + 1
-              : state.totalMalicious,
+            totalCount: packet.stats.total_packets,
+            totalMalicious: packet.stats.total_malicious,
           };
         }),
       setConnectionStatus: (status) => set({ connectionStatus: status }),
-      clearPackets: () => set({ packets: [] }),
     }));
   }
 

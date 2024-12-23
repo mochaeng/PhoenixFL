@@ -7,9 +7,15 @@ const metadataSchema = z.object({
   l4_dst_port: z.number(),
 });
 
+const statsSchema = z.object({
+  total_packets: z.number(),
+  total_malicious: z.number(),
+});
+
 export const PacketSchema = z.object({
   id: z.string(),
   metadata: metadataSchema,
+  stats: statsSchema,
   classification_time: z.number(),
   total_time: z.number(),
   worker_name: z.string(),

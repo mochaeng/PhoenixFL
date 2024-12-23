@@ -12,3 +12,11 @@ export function formatSeconds(value: number) {
   });
   return `${formatted.format(value)}s`;
 }
+
+export function formatMaliciousPercentage(value: number) {
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${formatted.format(value)}`;
+}

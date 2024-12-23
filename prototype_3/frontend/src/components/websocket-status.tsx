@@ -1,11 +1,14 @@
 import { usePacketStore } from "@/hooks/use-packet-store";
+import React from "react";
 
-export function WebsocketStatus() {
+export function WebsocketStatus({
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   const connectionStatus = usePacketStore((state) => state.connectionStatus);
 
   return (
-    <div>
-      <span className="font-semibold">Websocket connection</span>:{" "}
+    <div {...props}>
+      <span className="font-semibold">PhoenixFL status</span>:{" "}
       {connectionStatus}
     </div>
   );
