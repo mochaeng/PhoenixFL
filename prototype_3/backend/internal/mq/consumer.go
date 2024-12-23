@@ -9,6 +9,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+type stats struct {
+	totalPackets   int64
+	totalMalicious int64
+	sourceCount    map[string]int64
+	destCount      map[string]int64
+	workerCount    map[string]int64
+}
+
 func ConnectToRabbitMQ() (*amqp.Connection, *amqp.Channel) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -81,17 +89,27 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 		return err
 	}
 
+	stats := stats{}
 	for d := range msgs {
-		var packet models.ClassifiedPacketResponse
-		err := json.Unmarshal([]byte(d.Body), &packet)
+		var packetResponse models.ClassifiedPacketResponse
+		err := json.Unmarshal([]byte(d.Body), &packetResponse)
 		if err != nil {
 			log.Printf("Error parsing json: %s\n", err)
 			d.Nack(false, true)
 			continue
 		}
-		packet.ID = uuid.NewString()
-		log.Printf("Received a message: %+v\n", packet)
-		packetsChan <- packet
+
+		stats.totalPackets += 1
+		if packetResponse.IsMalicious {
+			stats.totalMalicious += 1
+		}
+
+		packetResponse.ID = uuid.NewString()
+		packetResponse.Stats.TotalPackets = stats.totalPackets
+		packetResponse.Stats.TotalMalicious = stats.totalMalicious
+
+		log.Printf("Received a message: %+v\n", packetResponse)
+		packetsChan <- packetResponse
 		d.Ack(false)
 	}
 

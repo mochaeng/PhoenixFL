@@ -7,9 +7,15 @@ type MetadataResponse struct {
 	DestPortNum   int    `json:"l4_dst_port"`
 }
 
+type StatsResponse struct {
+	TotalPackets   int64 `json:"total_packets"`
+	TotalMalicious int64 `json:"total_malicious"`
+}
+
 type ClassifiedPacketResponse struct {
 	ID                 string           `json:"id"`
 	Metadata           MetadataResponse `json:"metadata"`
+	Stats              StatsResponse    `json:"stats"`
 	ClassificationTime float64          `json:"classification_time"`
 	TotalTime          float64          `json:"total_time"`
 	WorkerName         string           `json:"worker_name"`
