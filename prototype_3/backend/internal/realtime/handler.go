@@ -36,12 +36,16 @@ func LiveClassificationsHandler(hub *Hub) http.HandlerFunc {
 		clientID := conn.RemoteAddr().String()
 		hub.Add(clientID, conn)
 		log.Printf("Client connected: %s\n", clientID)
+		log.Printf("Total clients connected: %d\n", len(hub.clients))
 
 		client, _ := hub.Get(clientID)
-
 		defer func() {
-			client.Hub.Remove(client.ID)
-			log.Printf("Client disconnected id [%s]\n", client.ID)
+			if client != nil && client.Hub != nil {
+				client.Hub.Remove(client.ID)
+				log.Printf("Client disconnected id [%s]\n", client.ID)
+			} else {
+				log.Printf("Client or Hub is nil during cleanup")
+			}
 		}()
 
 		for packet := range client.PacketsChan {

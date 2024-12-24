@@ -29,7 +29,9 @@ func (hub *Hub) Add(clientID string, conn *websocket.Conn) {
 	}
 
 	hub.clients[clientID] = &Client{
+		ID:          clientID,
 		Conn:        conn,
+		Hub:         hub,
 		PacketsChan: make(chan models.ClassifiedPacketResponse),
 	}
 }
@@ -43,8 +45,8 @@ func (hub *Hub) Remove(clientID string) {
 		return
 	}
 
-	client.Conn.Close()
 	close(client.PacketsChan)
+	client.Conn.Close()
 	delete(hub.clients, clientID)
 }
 
