@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func StartWebSocketServer(packetsChan <-chan models.ClassifiedPacketResponse) {
+func StartWebSocketServer(packetsChan <-chan models.PacketWithStatsResponse) {
 	hub := NewClientsHub()
 	hub.StartPacketsBroadCastLoop(packetsChan)
 

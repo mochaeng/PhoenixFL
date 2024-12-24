@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	packetsChan := make(chan models.ClassifiedPacketResponse)
+	packetsChan := make(chan models.PacketWithStatsResponse)
 
 	conn, ch := mq.ConnectToRabbitMQ()
 	defer conn.Close()

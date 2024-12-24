@@ -4,18 +4,10 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/google/uuid"
+	"github.com/mochaeng/phoenixfl/internal/algorithms"
 	"github.com/mochaeng/phoenixfl/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
-
-type stats struct {
-	totalPackets   int64
-	totalMalicious int64
-	sourceCount    map[string]int64
-	destCount      map[string]int64
-	workerCount    map[string]int64
-}
 
 func ConnectToRabbitMQ() (*amqp.Connection, *amqp.Channel) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
@@ -75,7 +67,7 @@ func GetAlertsQueue(ch *amqp.Channel) (*amqp.Queue, error) {
 	return &q, nil
 }
 
-func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan models.ClassifiedPacketResponse) error {
+func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan models.PacketWithStatsResponse) error {
 	msgs, err := ch.Consume(
 		queue.Name, // queue
 		"",         // consumer
@@ -89,26 +81,31 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 		return err
 	}
 
-	stats := stats{}
+	stats := algorithms.NewPacketStats()
 	for d := range msgs {
-		var packetResponse models.ClassifiedPacketResponse
-		err := json.Unmarshal([]byte(d.Body), &packetResponse)
+		var packet models.Packet
+		err := json.Unmarshal([]byte(d.Body), &packet)
 		if err != nil {
 			log.Printf("Error parsing json: %s\n", err)
 			d.Nack(false, true)
 			continue
 		}
 
-		stats.totalPackets += 1
-		if packetResponse.IsMalicious {
-			stats.totalMalicious += 1
+		stats.Update(packet)
+
+		packetResponse := models.PacketWithStatsResponse{}
+		packetResponse.Packet = &packet
+		packetResponse.Stats = models.StatsResponse{
+			TotalPackets:   stats.TotalPackets,
+			TotalMalicious: stats.TotalMalicious,
+		}
+		malicious := stats.GetTopMaliciousIps(5)
+		log.Println(len(malicious))
+		for i := 0; i < len(malicious); i++ {
+			log.Printf("%+v ", malicious[i])
 		}
 
-		packetResponse.ID = uuid.NewString()
-		packetResponse.Stats.TotalPackets = stats.totalPackets
-		packetResponse.Stats.TotalMalicious = stats.totalMalicious
-
-		log.Printf("Received a message: %+v\n", packetResponse)
+		// log.Printf("Received a message: %+v\n", packetResponse)
 		packetsChan <- packetResponse
 		d.Ack(false)
 	}

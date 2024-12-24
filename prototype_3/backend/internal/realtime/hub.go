@@ -32,7 +32,7 @@ func (hub *Hub) Add(clientID string, conn *websocket.Conn) {
 		ID:          clientID,
 		Conn:        conn,
 		Hub:         hub,
-		PacketsChan: make(chan models.ClassifiedPacketResponse),
+		PacketsChan: make(chan models.PacketWithStatsResponse),
 	}
 }
 
@@ -57,7 +57,7 @@ func (hub *Hub) Get(clientID string) (*Client, bool) {
 	return client, exists
 }
 
-func (hub *Hub) broadcastPacket(packet models.ClassifiedPacketResponse) {
+func (hub *Hub) broadcastPacket(packet models.PacketWithStatsResponse) {
 	hub.mu.RLock()
 	defer hub.mu.RUnlock()
 
@@ -70,7 +70,7 @@ func (hub *Hub) broadcastPacket(packet models.ClassifiedPacketResponse) {
 	}
 }
 
-func (hub *Hub) StartPacketsBroadCastLoop(packetsChan <-chan models.ClassifiedPacketResponse) {
+func (hub *Hub) StartPacketsBroadCastLoop(packetsChan <-chan models.PacketWithStatsResponse) {
 	go func() {
 		for packet := range packetsChan {
 			hub.broadcastPacket(packet)

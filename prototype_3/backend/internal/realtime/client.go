@@ -9,5 +9,5 @@ type Client struct {
 	ID          string
 	Hub         *Hub
 	Conn        *websocket.Conn
-	PacketsChan chan models.ClassifiedPacketResponse
+	PacketsChan chan models.PacketWithStatsResponse
 }
