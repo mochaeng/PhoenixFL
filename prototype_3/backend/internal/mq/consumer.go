@@ -3,6 +3,7 @@ package mq
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/mochaeng/phoenixfl/internal/algorithms"
 	"github.com/mochaeng/phoenixfl/internal/models"
@@ -91,7 +92,12 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 			continue
 		}
 
+		start := time.Now()
 		stats.Update(packet)
+		malicious := stats.GetTopMaliciousIps(5)
+		elapsed := time.Since(start)
+
+		log.Println(elapsed)
 
 		packetResponse := models.PacketWithStatsResponse{}
 		packetResponse.Packet = &packet
@@ -99,10 +105,9 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 			TotalPackets:   stats.TotalPackets,
 			TotalMalicious: stats.TotalMalicious,
 		}
-		malicious := stats.GetTopMaliciousIps(5)
-		log.Println(len(malicious))
+
 		for i := 0; i < len(malicious); i++ {
-			log.Printf("%+v ", malicious[i])
+			// log.Printf("%+v ", malicious[i])
 		}
 
 		// log.Printf("Received a message: %+v\n", packetResponse)
