@@ -1,10 +1,13 @@
+import { IpsTable } from "@/components/home/ips-table";
+import { LatestPacketsTable } from "@/components/home/latest-packets-table";
 import { MainStatsCards } from "@/components/home/main-stats-cards";
 
 export function OverviewPage() {
   return (
-    <div className="max-w-screen-3xl flex h-full w-full flex-col justify-center gap-2 bg-blue-100">
+    <div className="flex h-full w-full max-w-screen-3xl flex-col items-center justify-center gap-2">
       <MainStatsCards />
-      {/* <LatestPacketsTable /> */}
+      <LatestPacketsTable />
+      <IpsTable />
     </div>
   );
 }

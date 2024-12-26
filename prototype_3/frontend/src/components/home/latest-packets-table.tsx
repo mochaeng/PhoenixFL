@@ -29,12 +29,14 @@ export function LatestPacketsTable() {
       <TableBody>
         {packets.map((packet) => (
           <TableRow key={packet.id}>
-            <TableCell>{packet.metadata.ipv4_src_addr}</TableCell>
-            <TableCell>{packet.metadata.l4_src_port}</TableCell>
-            <TableCell>{packet.metadata.ipv4_dst_addr}</TableCell>
-            <TableCell>{packet.metadata.l4_dst_port}</TableCell>
-            <TableCell>{formatSeconds(packet.total_time)}</TableCell>
-            <TableCell>{packet.is_malicious ? "True" : "False"}</TableCell>
+            <TableCell>{packet.packet_info.metadata.ipv4_src_addr}</TableCell>
+            <TableCell>{packet.packet_info.metadata.l4_src_port}</TableCell>
+            <TableCell>{packet.packet_info.metadata.ipv4_dst_addr}</TableCell>
+            <TableCell>{packet.packet_info.metadata.l4_dst_port}</TableCell>
+            <TableCell>{formatSeconds(packet.packet_info.latency)}</TableCell>
+            <TableCell>
+              {packet.packet_info.is_malicious ? "True" : "False"}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

@@ -1,22 +1,25 @@
 import { create } from "zustand";
-import { PacketResponse } from "@/lib/responses";
+import { PacketResponse, StatsResponse } from "@/lib/responses";
 
 export const SizeThreshold = 8;
 
 export type PacketStore = {
   connectionStatus: string;
   packets: PacketResponse[];
-  totalCount: number;
-  totalMalicious: number;
+  stats: StatsResponse;
   addPacket: (packet: PacketResponse) => void;
   setConnectionStatus: (status: string) => void;
 };
 
 export const usePacketStore = create<PacketStore>()((set) => ({
-  packets: [],
-  totalCount: 0,
-  totalMalicious: 0,
   connectionStatus: "",
+  packets: [],
+  stats: {
+    total_malicious: 0,
+    total_packets: 0,
+    malicious_ips: [],
+    targeted_ips: [],
+  },
   addPacket: (packet) =>
     set((state) => {
       const updatedPackets = [packet, ...state.packets];
@@ -27,6 +30,7 @@ export const usePacketStore = create<PacketStore>()((set) => ({
         packets: updatedPackets,
         totalCount: packet.stats.total_packets,
         totalMalicious: packet.stats.total_malicious,
+        stats: packet.stats,
       };
     }),
   setConnectionStatus: (status) => set({ connectionStatus: status }),

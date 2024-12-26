@@ -29,13 +29,11 @@ function RootLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="px-4">
-        {/* <PacketStoreProvider> */}
         <Header />
         <WebsocketListener />
-        <div className="flex justify-center bg-rose-50">
+        <div className="mt-4 flex justify-center">
           <Outlet />
         </div>
-        {/* </PacketStoreProvider> */}
       </SidebarInset>
     </SidebarProvider>
   );

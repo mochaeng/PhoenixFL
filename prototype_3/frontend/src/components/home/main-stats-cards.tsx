@@ -10,13 +10,11 @@ import { formatMaliciousPercentage } from "@/lib/utils";
 import { usePacketStore } from "@/store/packet";
 
 export function MainStatsCards() {
-  const totalCount = usePacketStore((state) => state.totalCount);
-  const totalMalicious = usePacketStore((state) => state.totalMalicious);
+  const totalCount = usePacketStore((state) => state.stats.total_packets);
+  const totalMalicious = usePacketStore((state) => state.stats.total_malicious);
   const maliciousPercentage = formatMaliciousPercentage(
     totalMalicious / totalCount,
   );
-
-  console.log(totalCount);
 
   const data = [
     {

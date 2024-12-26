@@ -26,6 +26,7 @@ export function WebsocketListener() {
   useEffect(() => {
     if (lastMessage) {
       const data = JSON.parse(lastMessage.data);
+      // console.log(lastMessage);
       const parsed = PacketSchema.safeParse(data);
       if (!parsed.success) {
         console.log(
@@ -34,6 +35,7 @@ export function WebsocketListener() {
         );
         return;
       }
+      // console.log(parsed.data);
       addPacket(parsed.data);
     }
   }, [lastMessage, addPacket]);

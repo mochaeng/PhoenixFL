@@ -15,8 +15,8 @@ export function formatSeconds(value: number) {
 
 export function formatMaliciousPercentage(value: number) {
   const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   });
   return `${formatted.format(value)}`;
 }
