@@ -12,14 +12,16 @@ type PacketStats struct {
 	WorkerCount    map[string]int64
 	AvgLatency     float64
 
-	topMaliciousIps *TopIpTracker
+	maliciousIps IpTracker
+	targetedIps  IpTracker
 }
 
 func NewPacketStats() *PacketStats {
 	packetStats := PacketStats{
-		SourceCount:     make(map[string]int64),
-		DestCount:       make(map[string]int64),
-		topMaliciousIps: NewTopIpTracker(),
+		SourceCount:  make(map[string]int64),
+		DestCount:    make(map[string]int64),
+		maliciousIps: NewIpTrackerBTree(),
+		targetedIps:  NewIpTrackerBTree(),
 	}
 	return &packetStats
 }
@@ -37,22 +39,15 @@ func (stats *PacketStats) Update(packet models.Packet) {
 		stats.SourceCount[sourceIp]++
 		stats.DestCount[destIp]++
 
-		stats.topMaliciousIps.AddOrUpdateIpCount(sourceIp)
-
-		// AddOrUpdateIpCount(stats.sourceCountTree, sourceIp)
-		// AddOrUpdateIpCount(stats.destCountTree, destIp)
-
-		// heap.Push(&stats.SourcePriorityQueue, &Item{
-		// 	Value:    sourceIp,
-		// 	Priority: stats.SourceCount[sourceIp],
-		// })
-		// heap.Push(&stats.DestPriorityQueue, &Item{
-		// 	Value:    destIp,
-		// 	Priority: stats.DestCount[destIp],
-		// })
+		stats.maliciousIps.AddOrUpdateIpCount(sourceIp)
+		stats.targetedIps.AddOrUpdateIpCount(destIp)
 	}
 }
 
-func (stats *PacketStats) GetTopMaliciousIps(n int) []*ipCountItem {
-	return stats.topMaliciousIps.getTopIps(n)
+func (stats *PacketStats) GetTopMaliciousIps(n int) []*models.IpCount {
+	return stats.maliciousIps.GetTopIps(n)
+}
+
+func (stats *PacketStats) GetTopTargetedIps(n int) []*models.IpCount {
+	return stats.targetedIps.GetTopIps(n)
 }

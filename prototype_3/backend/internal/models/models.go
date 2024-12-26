@@ -5,6 +5,10 @@ type IpCount struct {
 	Count   int64  `json:"count"`
 }
 
+// type ipCountItem struct {
+// 	*IpCount
+// }
+
 type Packet struct {
 	Metadata           MetadataResponse `json:"metadata"`
 	ClassificationTime float64          `json:"classification_time"`
@@ -22,8 +26,10 @@ type MetadataResponse struct {
 }
 
 type StatsResponse struct {
-	TotalPackets   int64 `json:"total_packets"`
-	TotalMalicious int64 `json:"total_malicious"`
+	TotalPackets   int64      `json:"total_packets"`
+	TotalMalicious int64      `json:"total_malicious"`
+	MaliciousIps   []*IpCount `json:"malicious_ips"`
+	TargetedIps    []*IpCount `json:"targeted_ips"`
 }
 
 type PacketWithStatsResponse struct {

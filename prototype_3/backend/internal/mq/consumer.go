@@ -83,36 +83,35 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 	}
 
 	stats := algorithms.NewPacketStats()
-	for d := range msgs {
+	for delivery := range msgs {
+		start := time.Now()
+
 		var packet models.Packet
-		err := json.Unmarshal([]byte(d.Body), &packet)
+		err := json.Unmarshal([]byte(delivery.Body), &packet)
 		if err != nil {
 			log.Printf("Error parsing json: %s\n", err)
-			d.Nack(false, true)
+			delivery.Nack(false, true)
 			continue
 		}
 
-		start := time.Now()
 		stats.Update(packet)
-		malicious := stats.GetTopMaliciousIps(5)
-		elapsed := time.Since(start)
-
-		log.Println(elapsed)
+		maliciousIPs := stats.GetTopMaliciousIps(5)
+		targetedIps := stats.GetTopTargetedIps(5)
 
 		packetResponse := models.PacketWithStatsResponse{}
 		packetResponse.Packet = &packet
 		packetResponse.Stats = models.StatsResponse{
 			TotalPackets:   stats.TotalPackets,
 			TotalMalicious: stats.TotalMalicious,
+			MaliciousIps:   maliciousIPs,
+			TargetedIps:    targetedIps,
 		}
 
-		for i := 0; i < len(malicious); i++ {
-			// log.Printf("%+v ", malicious[i])
-		}
-
+		elapsed := time.Since(start)
+		log.Println(elapsed)
 		// log.Printf("Received a message: %+v\n", packetResponse)
 		packetsChan <- packetResponse
-		d.Ack(false)
+		delivery.Ack(false)
 	}
 
 	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
