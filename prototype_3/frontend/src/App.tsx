@@ -14,7 +14,7 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/dashboard/home" replace /> },
+      { index: true, element: <Navigate to="/dashboard/overview" replace /> },
       {
         path: "dashboard",
         children: [

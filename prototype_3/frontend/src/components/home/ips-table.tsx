@@ -36,7 +36,7 @@ export function IpsTable() {
       <div className="flex flex-wrap items-center justify-center gap-12">
         {data.map((info) => (
           <div className="w-96">
-            <Table key={info.caption} className="">
+            <Table key={info.caption}>
               <TableCaption>{info.caption}</TableCaption>
               <TableHeader>
                 <TableRow>
