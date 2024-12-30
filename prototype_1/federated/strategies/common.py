@@ -1,3 +1,4 @@
+import pickle
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import flwr as fl
@@ -8,17 +9,20 @@ from flwr.common import (
     NDArrays,
     Parameters,
     Scalar,
+    parameters_to_ndarrays,
 )
 from flwr.common.typing import Metrics
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from overrides import override
 
+from federated.federated_helpers import save_global_model
+
 FederatedEvalutionDataFn = Callable[[int, List[Tuple[int, Metrics]]], None]
 FederatedEvalutionForFedPlusDataFn = Callable[[int, List[Tuple[str, Metrics]]], None]
 
 
-class FedAvgWithFederatedEvaluation(fl.server.strategy.FedAvg):
+class FedAvgWithFederatedEvaluationAndModelSave(fl.server.strategy.FedAvg):
     def __init__(
         self,
         *,
@@ -76,6 +80,12 @@ class FedAvgWithFederatedEvaluation(fl.server.strategy.FedAvg):
         self.on_federated_evaluation_results(server_round, federated_evaluation_results)
 
         return super().aggregate_evaluate(server_round, results, failures)
+
+    def evaluate(
+        self, server_round: int, parameters: Parameters
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        save_global_model("fedavg", server_round, parameters)
+        return super().evaluate(server_round, parameters)
 
 
 class FedProxWithFederatedEvaluation(fl.server.strategy.FedProx):
@@ -457,6 +467,12 @@ class FedMedianWithFederatedEvaluation(fl.server.strategy.FedMedian):
         self.on_federated_evaluation_results(server_round, federated_evaluation_results)
 
         return super().aggregate_evaluate(server_round, results, failures)
+
+    def evaluate(
+        self, server_round: int, parameters: Parameters
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        save_global_model("fedmedian", server_round, parameters)
+        return super().evaluate(server_round, parameters)
 
 
 class FedTrimmedAvgWithFederatedEvaluation(fl.server.strategy.FedTrimmedAvg):

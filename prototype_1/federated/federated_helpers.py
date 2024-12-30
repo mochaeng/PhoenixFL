@@ -1,14 +1,30 @@
 import os
+import pickle
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
-from flwr.common import Scalar
+from flwr.common import (
+    EvaluateRes,
+    FitIns,
+    MetricsAggregationFn,
+    NDArrays,
+    Parameters,
+    Scalar,
+    parameters_to_ndarrays,
+)
 from torch.utils.data import DataLoader
 
-from neural.helpers import TRAIN_CONFIG, get_test_loader, get_train_and_test_loaders
+from neural.architectures import MLP
+from neural.helpers import (
+    DEVICE,
+    TRAIN_CONFIG,
+    get_test_loader,
+    get_train_and_test_loaders,
+    zeroing_parameters,
+)
 from pre_process.pre_process import (
     CLIENTS_PATH,
     DATASETS_PATHS,
@@ -24,6 +40,7 @@ TOTAL_NUMBER_OF_CLIENTS = 3
 NUM_ROUNDS = 3
 
 PATH_TO_METRICS_FOLDER = "federated/metrics"
+MODELS_FOLDER_PATH = "federated/models"
 METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "metrics.json")
 WEIGHTED_METRICS_FILE_PATH = os.path.join(PATH_TO_METRICS_FOLDER, "weighted.json")
 
@@ -127,3 +144,14 @@ def get_centralized_test_loader(batch_size, scaler: ScalerType):
     test_loader = get_test_loader(test_data, batch_size)
 
     return test_loader
+
+
+def save_global_model(model_name, server_round, parameters):
+    ndarrays = parameters_to_ndarrays(parameters)
+    model = MLP().to(DEVICE)
+    set_parameters(model, ndarrays)
+    model_scripted = torch.jit.script(model)
+    torch_script_file_path = os.path.join(
+        f"{MODELS_FOLDER_PATH}/{model_name}_{server_round}.pt"
+    )
+    model_scripted.save(torch_script_file_path)  # type: ignore

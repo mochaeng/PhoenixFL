@@ -7,7 +7,7 @@ from federated.strategies.common import (
     FeadAvgPlusWithFederatedEvaluation,
     FedAdagradWithFederatedEvaluation,
     FedAdamWithFederatedEvaluation,
-    FedAvgWithFederatedEvaluation,
+    FedAvgWithFederatedEvaluationAndModelSave,
     FedMedianWithFederatedEvaluation,
     FedProxWithFederatedEvaluation,
     FedTrimmedAvgWithFederatedEvaluation,
@@ -35,7 +35,7 @@ class FedProxStrategy(FederatedStrategy):
 
 class FedAvgStrategy(FederatedStrategy):
     def create_strategy(self, on_federated_evaluation_results):
-        return FedAvgWithFederatedEvaluation(
+        return FedAvgWithFederatedEvaluationAndModelSave(
             on_federated_evaluation_results=on_federated_evaluation_results,
             **self.kwargs,
         )

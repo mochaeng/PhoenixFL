@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mu",
         type=float,
-        help="Value for proximal_mu",
+        help="Value for proximal_mu (fedprox)",
         default=1.0,
     )
     parser.add_argument(
@@ -218,7 +218,6 @@ if __name__ == "__main__":
 
     LOADERS = get_all_federated_loaders(BATCH_SIZE)
     initial_model = MLP().to(DEVICE)
-    # zeroing_parameters(initial_model)
     starting_params = get_parameters(initial_model)
 
     strategy_config = {
