@@ -26,15 +26,17 @@ The script can be executed with various options to control the federated learnin
 
 - To train a model with 10 rounds of federated learning:
 
-  ```bash
-  python -m federated.main --num-rounds 10
-  ```
+    ```bash
+    python -m federated.main --num-rounds 10
+    ```
 
 - To use the `FedProx` strategy for aggregation:
 
-  ```sh
-  python -m federated.main --algo fedprox --mu 1.0
-  ```
+    ```sh
+    python -m federated.main --algo fedprox --mu 1.0
+    ```
+
+-
 
 <!-- ## Running
 

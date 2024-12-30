@@ -9,15 +9,6 @@ import scipy
 import scipy.stats
 from sklearn.model_selection import train_test_split
 
-COLUMNS_TO_REMOVE = [
-    # "IPV4_SRC_ADDR",
-    # "IPV4_DST_ADDR",
-    # "L4_SRC_PORT",
-    # "L4_DST_PORT",
-]
-
-CHARTS_PATH = "datasets/charts"
-
 
 def __print_dataset_info(client_name, df_train, df_test):
     print("-" * 50)
@@ -26,17 +17,17 @@ def __print_dataset_info(client_name, df_train, df_test):
     print(
         f"Train duplicates [no-attack]: {df_train.drop(columns=['Attack']).duplicated().sum()}"
     )
-    print(f"Classes: {get_duplicates_in_df_after_remove_attack_column(df_train)}\n")  # type: ignore
+    print(f"Classes: {__get_duplicates_in_df_after_remove_attack_column(df_train)}\n")  # type: ignore
 
     print(f"Test duplicates: {df_test.duplicated().sum()}")
     print(
         f"Test duplicates [no-attack]: {df_test.drop(columns=['Attack']).duplicated().sum()}"
     )
-    print(f"Classes: {get_duplicates_in_df_after_remove_attack_column(df_test)}\n")  # type: ignore
+    print(f"Classes: {__get_duplicates_in_df_after_remove_attack_column(df_test)}\n")  # type: ignore
     print("-" * 50)
 
 
-def get_duplicates_in_df_after_remove_attack_column(df: pd.DataFrame):
+def __get_duplicates_in_df_after_remove_attack_column(df: pd.DataFrame):
     df_no_attack = df.drop(columns=["Attack"])
     duplicates = df_no_attack[df_no_attack.duplicated()]
     duplicates_with_attack = pd.merge(
@@ -132,9 +123,6 @@ if __name__ == "__main__":
                 df = pd.read_csv(client_file_path)
             case "parquet":
                 df = pd.read_parquet(client_file_path, engine="pyarrow")
-
-        # df = remove_outliers(client_name, df)
-        # df = df.drop(columns=COLUMNS_TO_REMOVE)
 
         x = df.iloc[:, :-1].values
         y = df.iloc[:, -1:].values
