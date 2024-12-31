@@ -16,15 +16,16 @@ from rpc.helpers import COLUMNS_TO_REMOVE, Metadata, PublishRequest
 class ClientRPC:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
-    PUBLISH_INTERVAL = 0.1
+    PUBLISH_INTERVAL = 0.001
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
-    def __init__(self, amqp_url: str, packets: pd.DataFrame):
+    def __init__(self, amqp_url: str, messages: list):
         signal.signal(signal.SIGINT, self.handle_interrupt)
 
         self.url = amqp_url
-        self.packets = packets
+        # self.packets = packets
+        self.messages = messages
         self.connection = None
         self.channel = None
         self.deliveries = {}
@@ -152,9 +153,9 @@ class ClientRPC:
         ack_multiple = method_frame.method.multiple
         delivery_tag = method_frame.method.delivery_tag
 
-        print(
-            f"Received {confirmation_type} for delivery tag: {delivery_tag} (multiple: {ack_multiple})"
-        )
+        # print(
+        #     f"Received {confirmation_type} for delivery tag: {delivery_tag} (multiple: {ack_multiple})"
+        # )
 
         if confirmation_type == "ack":
             self.acked += 1
@@ -169,15 +170,15 @@ class ClientRPC:
                     self.acked += 1
                     del self.deliveries[tmp_tag]
 
-        print(
-            f"Published {self.message_number} messages, {len(self.deliveries)} have yet to be confirmed, {self.acked} were acked and {self.nacked} were nacked",
-        )
+        # print(
+        #     f"Published {self.message_number} messages, {len(self.deliveries)} have yet to be confirmed, {self.acked} were acked and {self.nacked} were nacked",
+        # )
 
     def schedule_next_message(self):
-        print(f"Scheduling next message for {self.PUBLISH_INTERVAL} seconds")
+        # print(f"Scheduling next message for {self.PUBLISH_INTERVAL} seconds")
         if self.connection is None:
             raise ConnectionNotOpenedError()
-        # if self.message_number >= 100:
+        # if self.message_number >= 12_000:
         #     self.stop()
         self.connection.ioloop.call_later(self.PUBLISH_INTERVAL, self.publish_message)
 
@@ -185,21 +186,16 @@ class ClientRPC:
         if self.channel is None or not self.channel.is_open:
             return
 
-        packet = self.packets.iloc[self.current_packet % len(self.packets)]
-        metadata = packet[COLUMNS_TO_REMOVE].to_dict()
-        packet = packet.drop(COLUMNS_TO_REMOVE).to_dict()
-
-        data: PublishRequest = {
-            "send_timestamp": str(time.time()),
-            "metadata": metadata,
-            "packet": packet,
-        }
-        message = json.dumps(data).encode()
+        message: PublishRequest = self.messages[
+            self.current_packet % len(self.messages)
+        ]
+        message["send_timestamp"] = str(time.time())
+        encoded_message = json.dumps(message).encode()
 
         self.channel.basic_publish(
             exchange=self.EXCHANGE,
             routing_key=self.ROUTING_KEY,
-            body=message,
+            body=encoded_message,
             properties=pika.BasicProperties(content_type="application/json"),
         )
 
@@ -250,5 +246,15 @@ if __name__ == "__main__":
         usecols=lambda column: column != "Attack" and column != "Label",
     )
 
-    client = ClientRPC("localhost", packets_df)
+    messages = []
+    for idx, row in packets_df.iterrows():
+        metadata = row[COLUMNS_TO_REMOVE].to_dict()  # type: ignore
+        packet = row.drop(COLUMNS_TO_REMOVE).to_dict()
+        data = {
+            "metadata": metadata,
+            "packet": packet,
+        }
+        messages.append(data)
+
+    client = ClientRPC("localhost", messages)
     client.run()

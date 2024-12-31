@@ -16,6 +16,6 @@ def write_latencies(name, latencies):
         "min": latencies_pd[column].min(),
     }
     path = f"data/workers/{name}"
-    latencies_pd.to_csv(f"{path}_latencies.csv")
+    # latencies_pd.to_csv(f"{path}_latencies.csv")
     with open(f"{path}_metrics.json", "w+") as f:
         json.dump(metrics, f, indent=4)

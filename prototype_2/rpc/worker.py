@@ -4,8 +4,8 @@ import signal
 import time
 from uuid import uuid4
 
-from pandas.core.window.expanding import Literal
 import pika
+from pandas.core.window.expanding import Literal
 from pika.exchange_type import ExchangeType
 
 from rpc.classifier import PytorchClassifier
@@ -40,7 +40,7 @@ class Worker:
         self.name = name
 
     def handle_interrupt(self, signum, _frame):
-        print(f"Received signal {signum}. Stopping the wroker...")
+        print(f"Received signal {signum}. Stopping the worker...")
         self.stop()
 
     def connect(self):
@@ -130,7 +130,9 @@ class Worker:
 
     def on_queue_declareok(self, _frame, userdata):
         queue_name = userdata
-        print(f"Binding {self.EXCHANGE} to {queue_name} with {queue_name} as routing key")
+        print(
+            f"Binding {self.EXCHANGE} to {queue_name} with {queue_name} as routing key"
+        )
         cb = functools.partial(self.on_bindok, userdata=queue_name)
         if self._channel is None:
             raise ChannelNotOpenedError()
@@ -158,7 +160,9 @@ class Worker:
         self.add_on_cancel_callback()
         if self._channel is None:
             raise ChannelNotOpenedError()
-        self._consumer_tag = self._channel.basic_consume(self.REQUESTS_QUEUE, self.on_message)
+        self._consumer_tag = self._channel.basic_consume(
+            self.REQUESTS_QUEUE, self.on_message
+        )
         self.was_consuming = True
         self._consuming = True
 
@@ -175,7 +179,7 @@ class Worker:
         self._channel.close()
 
     def on_message(self, channel, basic_deliver, properties, body):
-        print(f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}")
+        # print(f"Received message #{basic_deliver.delivery_tag} >> {properties.app_id}")
         processing_start_time = time.time()
 
         message: PublishRequest = json.loads(body)
@@ -194,9 +198,10 @@ class Worker:
         classified_packet = {
             "metadata": metadata,
             "classification_time": classification_latency,
-            "total_time": total_latency,
+            "latency": total_latency,
             "worker_name": self.name,
             "is_malicious": isMalicious,
+            "timestamp": time.time(),
         }
 
         def publish_to_alerts():
@@ -205,7 +210,7 @@ class Worker:
                     exchange=self.EXCHANGE,
                     routing_key=self.ALERTS_QUEUE,
                     body=json.dumps(classified_packet),
-                    properties=pika.BasicProperties(content_type="application/json")
+                    properties=pika.BasicProperties(content_type="application/json"),
                 )
 
         if self._connection is not None:
@@ -261,7 +266,7 @@ class Worker:
 
 
 if __name__ == "__main__":
-    model_path = "data/model.pt"
+    model_path = "data/fedmedian_model.pt"
     scaler_path = "data/scaler.pkl"
     classifier = PytorchClassifier(model_path=model_path, scaler_path=scaler_path)
 
