@@ -24,7 +24,6 @@ type Client struct {
 	messages      []*ClientRequest
 	connection    *amqp.Connection
 	channel       *amqp.Channel
-	deliveries    map[uint64]bool
 	currentPacket int
 	acked         int
 	nacked        int
@@ -44,10 +43,9 @@ const (
 
 func NewClient(url string, messages []*ClientRequest) *Client {
 	return &Client{
-		url:        url,
-		messages:   messages,
-		deliveries: make(map[uint64]bool),
-		stopChan:   make(chan struct{}),
+		url:      url,
+		messages: messages,
+		stopChan: make(chan struct{}),
 	}
 }
 
@@ -123,6 +121,7 @@ func (c *Client) startPublishing(ctx context.Context) {
 
 	ticker := time.NewTicker(publishInterval)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -169,7 +168,7 @@ func (c *Client) publishMessage() {
 		return
 	}
 
-	fmt.Printf("Published message # %d\n", c.messageNumber)
+	// fmt.Printf("Published message # %d\n", c.messageNumber)
 	c.acked++
 }
 
@@ -187,7 +186,7 @@ func (c *Client) setupPublisherConfirms() error {
 func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
 	for confirmation := range confirmations {
 		if confirmation.Ack {
-			log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
+			// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
 			c.Lock()
 			c.acked++
 			c.Unlock()
@@ -255,14 +254,10 @@ func main() {
 		"L4_DST_PORT",
 	}
 
-	messages, err := ParseCSV("10_000-raw-packets.csv", columnsToRemove)
+	messages, err := ParseCSV("../data/10_000-raw-packets.csv", columnsToRemove)
 	if err != nil {
 		log.Panicf("failed to parse csv packets. Error: %v\n", err)
 	}
-
-	// messages := []*ClientRequest{
-	// 	{Metadata: map[string]interface{}{"key": "value"}, Packet: map[string]interface{}{"field": "data"}},
-	// }
 
 	client := NewClient("amqp://guest:guest@localhost:5672/", messages)
 

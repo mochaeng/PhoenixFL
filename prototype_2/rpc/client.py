@@ -16,7 +16,7 @@ from rpc.helpers import COLUMNS_TO_REMOVE, Metadata, PublishRequest
 class ClientRPC:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
-    PUBLISH_INTERVAL = 0.001
+    PUBLISH_INTERVAL = 0.002
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
@@ -108,6 +108,7 @@ class ClientRPC:
             exchange=exchange_name,
             exchange_type=self.EXCHANGE_TYPE,
             callback=call_back,
+            durable=True,
         )
 
     def on_exchange_declareok(self, _frame, userdata):
@@ -243,7 +244,6 @@ class ClientRPC:
 if __name__ == "__main__":
     packets_df = pd.read_csv(
         "data/10_000-raw-packets.csv",
-        usecols=lambda column: column != "Attack" and column != "Label",
     )
 
     messages = []

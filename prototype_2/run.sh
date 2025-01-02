@@ -14,31 +14,25 @@ for i in $(seq 1 $NUM_WORKERS); do
     WORKER_PIDS+=($!)
 done
 
-echo "Starting Clients..."
+echo "Starting packets sending..."
+cd golang
 CLIENT_PIDS=()
-for i in $(seq 1 $NUM_CLIENTS); do
-    poetry run python -m rpc.client &
-    CLIENT_PIDS+=($!)
-done
+go run *.go &
+CLIENT_PIDS+=($!)
+cd ..
 
-# clients sending packages for T seconds
+# sending packages for T seconds
 sleep 60
-# Waiting for clients to send packets
-# for pid in "${CLIENT_PIDS[@]}"; do
-#     wait $pid
-# done
+
 for pid in "${CLIENT_PIDS[@]}"; do
     kill -SIGINT $pid
 done
 echo "Clients finished processing."
 
-# # waiting for workers to finish consuming packets from the queue
-sleep 30
+# waiting for workers to finish consuming packets from the queue
+# sleep 30
 
 echo "Killing workers"
-# for pid in "${WORKER_PIDS[@]}"; do
-#     wait $pid
-# done
 for pid in "${WORKER_PIDS[@]}"; do
     kill -SIGINT ${pid}
 done

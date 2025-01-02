@@ -113,7 +113,10 @@ class Worker:
         if self._channel is None:
             raise ChannelNotOpenedError()
         self._channel.exchange_declare(
-            exchange=exchange_name, exchange_type=self.EXCHANGE_TYPE, callback=cb
+            exchange=exchange_name,
+            exchange_type=self.EXCHANGE_TYPE,
+            callback=cb,
+            durable=True,
         )
 
     def on_exchange_declareok(self, _frame, userdata):
