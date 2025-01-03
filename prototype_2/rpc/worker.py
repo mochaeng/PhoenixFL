@@ -2,6 +2,7 @@ import functools
 import json
 import signal
 import time
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import pika
@@ -21,7 +22,7 @@ class Worker:
     ALERTS_QUEUE = "alerts_queue"
 
     def __init__(self, amqp_url, classifier: PytorchClassifier, name: str):
-        signal.signal(signal.SIGINT, self.handle_interrupt)
+        # signal.signal(signal.SIGINT, self.handle_interrupt)
 
         self.should_reconnect = False
         self.was_consuming = False
@@ -32,16 +33,16 @@ class Worker:
         self._consumer_tag = None
         self._url = amqp_url
         self._consuming = False
-        self._prefetch_count = 2  # high values for higher consumer throughput
+        self._prefetch_count = 100  # high values for higher consumer throughput
         self.classifier = classifier
 
         self.processed_packages = 0
         self.latencies: list[float] = []
         self.name = name
 
-    def handle_interrupt(self, signum, _frame):
-        print(f"Received signal {signum}. Stopping the worker...")
-        self.stop()
+    # def handle_interrupt(self, signum, _frame):
+    #     print(f"Received signal {signum}. Stopping the worker...")
+    #     self.stop()
 
     def connect(self):
         print(f"Connecting to {self._url}")
@@ -269,13 +270,29 @@ class Worker:
 
 
 if __name__ == "__main__":
+    url = "localhost"
     model_path = "data/fedmedian_model.pt"
     scaler_path = "data/scaler.pkl"
     classifier = PytorchClassifier(model_path=model_path, scaler_path=scaler_path)
 
-    worker_name = f"worker_{uuid4()}"
-    url = "localhost"
-    consumer = Worker(url, classifier, worker_name)
-    consumer.run()
+    num_workers = 5
+    executor = ThreadPoolExecutor(max_workers=num_workers)
+    consumers = []
+    for _ in range(num_workers):
+        worker_name = f"worker_{uuid4()}"
+        consumer = Worker(url, classifier, worker_name)
+        consumers.append(consumer)
 
-    write_latencies(worker_name, consumer.latencies)
+    for consumer in consumers:
+        executor.submit(consumer.run)
+
+    def signal_handler(sig, frame):
+        print("worker has received shutdown signal")
+        for consumer in consumers:
+            consumer.stop()
+            write_latencies(consumer.name, consumer.latencies)
+        executor.shutdown(wait=True)
+        print("all workers stopped")
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.pause()
