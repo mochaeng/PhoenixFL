@@ -1,12 +1,14 @@
-package main
+package parser
 
 import (
 	"encoding/csv"
 	"fmt"
 	"os"
+
+	"github.com/mochaeng/phoenix-detector/internal/models"
 )
 
-func ParseCSV(filePath string, columnsToRemove []string) ([]*ClientRequest, error) {
+func ParseCSV(filePath string, columnsToRemove []string) ([]*models.ClientRequest, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %v\n", err)
@@ -24,7 +26,7 @@ func ParseCSV(filePath string, columnsToRemove []string) ([]*ClientRequest, erro
 		removeSet[col] = struct{}{}
 	}
 
-	var messages []*ClientRequest
+	var messages []*models.ClientRequest
 	for {
 		record, err := reader.Read()
 		if err != nil {
@@ -43,7 +45,7 @@ func ParseCSV(filePath string, columnsToRemove []string) ([]*ClientRequest, erro
 			}
 		}
 
-		messages = append(messages, &ClientRequest{
+		messages = append(messages, &models.ClientRequest{
 			Metadata: metadata,
 			Packet:   packet,
 		})
