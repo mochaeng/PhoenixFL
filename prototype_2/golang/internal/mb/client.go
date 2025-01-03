@@ -13,38 +13,40 @@ import (
 )
 
 type Client struct {
-	url           string
+	amqpURL       string
 	messages      []*models.ClientRequest
 	connection    *amqp.Connection
 	channel       *amqp.Channel
-	currentPacket int
-	acked         int
-	nacked        int
-	messageNumber int
+	currentPacket int64
+	acked         int64
+	nacked        int64
+	messageNumber int64
 	stopping      bool
 	stopChan      chan struct{}
-	sync.Mutex
+	ctx           context.Context
+	sync.RWMutex
 }
 
 const (
 	exchangeName    = "packet"
 	exchangeType    = "direct"
-	publishInterval = 2 * time.Millisecond
+	publishInterval = 1 * time.Millisecond
 	queueName       = "requests_queue"
 	routingKey      = queueName
 )
 
-func NewClient(url string, messages []*models.ClientRequest) *Client {
+func NewClient(url string, messages []*models.ClientRequest, ctx context.Context) *Client {
 	return &Client{
-		url:      url,
+		amqpURL:  url,
 		messages: messages,
 		stopChan: make(chan struct{}),
+		ctx:      ctx,
 	}
 }
 
 func (c *Client) Connect() error {
-	fmt.Printf("Connecting to %s\n", c.url)
-	conn, err := amqp.Dial(c.url)
+	fmt.Printf("Connecting to %s\n", c.amqpURL)
+	conn, err := amqp.Dial(c.amqpURL)
 	if err != nil {
 		return err
 	}
@@ -109,7 +111,7 @@ func (c *Client) SetupChannel() error {
 	return err
 }
 
-func (c *Client) StartPublishing(ctx context.Context) {
+func (c *Client) StartPublishing() {
 	fmt.Println("Starting publishing messages")
 
 	ticker := time.NewTicker(publishInterval)
@@ -117,7 +119,7 @@ func (c *Client) StartPublishing(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			fmt.Println("Stopping publishing")
 			return
 		case <-ticker.C:
@@ -134,10 +136,12 @@ func (c *Client) publishMessage() {
 		return
 	}
 
-	message := c.messages[c.currentPacket%len(c.messages)]
-	message.Timestamp = time.Now().Unix()
-	c.currentPacket++
-	c.messageNumber++
+	originalMessage := c.messages[c.currentPacket%int64(len(c.messages))]
+	message := &models.ClientRequest{
+		Timestamp: time.Now().Unix(),
+		Metadata:  originalMessage.Metadata,
+		Packet:    originalMessage.Packet,
+	}
 
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
@@ -161,8 +165,10 @@ func (c *Client) publishMessage() {
 		return
 	}
 
-	// fmt.Printf("Published message # %d\n", c.messageNumber)
+	c.currentPacket++
+	c.messageNumber++
 	c.acked++
+	// fmt.Printf("Published message # %d\n", c.messageNumber)
 }
 
 func (c *Client) SetupPublisherConfirms() error {
@@ -178,14 +184,20 @@ func (c *Client) SetupPublisherConfirms() error {
 
 func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
 	for confirmation := range confirmations {
-		if confirmation.Ack {
-			// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
-			c.Lock()
-			c.acked++
-			c.Unlock()
-		} else {
-			log.Printf("Message with delivery tag %d not acknowledged. Retrying...\n", confirmation.DeliveryTag)
-			c.retryMessage(confirmation.DeliveryTag)
+		select {
+		case <-c.ctx.Done():
+			fmt.Println("Stopping handling acks")
+			return
+		default:
+			if confirmation.Ack {
+				// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
+				c.Lock()
+				c.acked++
+				c.Unlock()
+			} else {
+				log.Printf("Message with delivery tag %d not acknowledged. Retrying...\n", confirmation.DeliveryTag)
+				c.retryMessage(confirmation.DeliveryTag)
+			}
 		}
 	}
 }
@@ -224,6 +236,7 @@ func (c *Client) Stop() {
 	c.Lock()
 	defer c.Unlock()
 
+	fmt.Println("was this even called??")
 	fmt.Println("Stopping client")
 	c.stopping = true
 	close(c.stopChan)
