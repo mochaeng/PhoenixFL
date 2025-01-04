@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -25,29 +23,37 @@ func main() {
 		log.Panicf("failed to parse csv packets. Error: %v\n", err)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	defer stop()
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGUSR1, syscall.SIGTERM)
 
-	client := mb.NewClient("amqp://guest:guest@localhost:5672/", messages, ctx)
-
+	client := mb.NewClient("amqp://guest:guest@localhost:5672/", messages)
 	err = client.Connect()
 	if err != nil {
 		log.Panicf("Failed to connect: %v\n", err)
 	}
-
-	err = client.SetupChannel()
+	err = client.SetupRabbitMQ()
 	if err != nil {
 		log.Panicf("Failed to set up channel: %v\n", err)
 	}
-
 	err = client.SetupPublisherConfirms()
 	if err != nil {
 		log.Panicf("Failed to set up publisher confirms: %v\n", err)
 	}
 
-	go client.StartPublishing()
-	<-ctx.Done()
+	for {
+		sig := <-sigChan
+		switch sig {
+		case syscall.SIGUSR1:
+			log.Println("Ready to start publishing")
+			go client.StartPublishing()
+		case syscall.SIGTERM:
+			log.Println("Stopping client")
+			client.Stop()
+			return
+		}
+	}
 
-	fmt.Println("not here? really")
-	client.Stop()
+	// go client.StartPublishing()
+	// <-ctx.Done()
+	// client.Stop()
 }
