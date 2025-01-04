@@ -3,7 +3,9 @@ package parser
 import (
 	"encoding/csv"
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 
 	"github.com/mochaeng/phoenix-detector/internal/models"
 )
@@ -33,21 +35,39 @@ func ParseCSV(filePath string, columnsToRemove []string) ([]*models.ClientReques
 			break
 		}
 
-		metadata := make(map[string]interface{})
-		packet := make(map[string]interface{})
+		metadata := make(map[string]string)
+		packet := make(map[string]float64)
 
 		for i, value := range record {
 			column := headers[i]
 			if _, isRemove := removeSet[column]; isRemove {
 				metadata[column] = value
 			} else {
-				packet[column] = value
+				floatValue, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					log.Printf("could not convert string value to float. Error: %v\n", err)
+				}
+				packet[column] = floatValue
 			}
 		}
 
+		sourcePort, err := strconv.ParseInt(metadata["L4_SRC_PORT"], 10, 64)
+		if err != nil {
+			log.Printf("could not convert string value to int. Error: %v\n", err)
+		}
+		destPort, err := strconv.ParseInt(metadata["L4_DST_PORT"], 10, 64)
+		if err != nil {
+			log.Printf("could not convert string value to int. Error: %v\n", err)
+		}
+
 		messages = append(messages, &models.ClientRequest{
-			Metadata: metadata,
-			Packet:   packet,
+			Metadata: models.MetadataRequest{
+				SourceIP:   metadata["IPV4_SRC_ADDR"],
+				SourcePort: int(sourcePort),
+				DestIP:     metadata["IPV4_DST_ADDR"],
+				DestPort:   int(destPort),
+			},
+			Packet: packet,
 		})
 	}
 
