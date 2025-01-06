@@ -65,7 +65,7 @@ func GetAlertsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	}
 	log.Println("Declaring [alerts_queue] queue")
 	queue, err := channel.QueueDeclare(
-		config.RequestsQueueName,
+		config.AlertsQueueName,
 		true,  // durable
 		false, // auto-deleted
 		false, // exclusive
@@ -78,7 +78,7 @@ func GetAlertsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	return &queue, nil
 }
 
-func BindQueueWithExchange(channel *amqp.Channel, queueName, routingKey, exchangeName string) error {
+func bindQueueWithExchange(channel *amqp.Channel, queueName, routingKey, exchangeName string) error {
 	if channel == nil {
 		return config.ErrInvalidChannel
 	}
@@ -92,6 +92,32 @@ func BindQueueWithExchange(channel *amqp.Channel, queueName, routingKey, exchang
 	)
 	if err != nil {
 		return fmt.Errorf("could not bind queue [%s] with exchange [%s]. Error: %v\n", queueName, exchangeName, err)
+	}
+	return nil
+}
+
+func BindRequestsQueueWithPacketExchange(channel *amqp.Channel) error {
+	err := bindQueueWithExchange(
+		channel,
+		config.RequestsQueueName,
+		config.RequestsQueueRoutingKey,
+		config.PacketExchangeName,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func BindAlertsQueueWithPacketExchange(channel *amqp.Channel) error {
+	err := bindQueueWithExchange(
+		channel,
+		config.AlertsQueueName,
+		config.AlertsQueueRoutingKey,
+		config.PacketExchangeName,
+	)
+	if err != nil {
+		return err
 	}
 	return nil
 }

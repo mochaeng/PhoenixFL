@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mochaeng/phoenix-detector/internal/config"
@@ -12,22 +13,24 @@ import (
 )
 
 type Worker struct {
-	name          string
-	amqpURL       string
+	name             string
+	amqpURL          string
+	latencies        []float64
+	processedPackets int
+	stopConsume      chan bool
+
 	conn          *amqp.Connection
 	channel       *amqp.Channel
-	latencies     []float64
-	processedPkgs int
-
-	stopConsume   chan bool
 	requestsQueue *amqp.Queue
+	alertsQueue   *amqp.Queue
 	requestsMsgs  <-chan amqp.Delivery
 }
 
 func NewWorker(amqpURL string) *Worker {
 	return &Worker{
-		name:    fmt.Sprintf("worker_%s", uuid.NewString()),
-		amqpURL: amqpURL,
+		name:        fmt.Sprintf("worker_%s", uuid.NewString()),
+		stopConsume: make(chan bool),
+		amqpURL:     amqpURL,
 	}
 }
 
@@ -47,7 +50,7 @@ func (w *Worker) Connect() error {
 	return nil
 }
 
-func (w *Worker) SetupRabbitMQ() error {
+func (w *Worker) SetupWorker() error {
 	if w.channel == nil {
 		return config.ErrInvalidChannel
 	}
@@ -67,37 +70,22 @@ func (w *Worker) SetupRabbitMQ() error {
 		return err
 	}
 
-	_, err = GetAlertsQueue(w.channel)
+	alertsQueue, err := GetAlertsQueue(w.channel)
 	if err != nil {
 		return err
 	}
 
-	w.requestsQueue = requestsQueue
-
-	return nil
-}
-
-func (w *Worker) ConsumeRequestsRequeue() {
-	for {
-		select {
-		case <-w.stopConsume:
-			log.Printf("worker %s has stopped\n", w.name)
-		case delivery := <-w.requestsMsgs:
-			var msg models.ClientRequest
-			err := json.Unmarshal([]byte(delivery.Body), &msg)
-			if err != nil {
-				log.Printf("error parsing message. Error: %v\n", err)
-				delivery.Nack(false, true)
-				continue
-			}
-			log.Printf("%v+\n", msg.Metadata)
-			delivery.Ack(false)
-		}
+	err = BindRequestsQueueWithPacketExchange(w.channel)
+	if err != nil {
+		return err
 	}
-}
 
-func (w *Worker) SetRequestsQueueMessages() error {
-	msgs, err := w.channel.Consume(
+	err = BindAlertsQueueWithPacketExchange(w.channel)
+	if err != nil {
+		return err
+	}
+
+	requestsMsgs, err := w.channel.Consume(
 		config.RequestsQueueName,
 		"",    // consumer
 		false, // auto-ack
@@ -109,16 +97,76 @@ func (w *Worker) SetRequestsQueueMessages() error {
 	if err != nil {
 		return fmt.Errorf("could not consume from queue [requests_queue]. Error: %v\n", err)
 	}
-	w.requestsMsgs = msgs
+
+	w.requestsQueue = requestsQueue
+	w.alertsQueue = alertsQueue
+	w.requestsMsgs = requestsMsgs
+
 	return nil
 }
 
-func (w *Worker) Stop() {
-	if w == nil {
-		return
-	}
+func (w *Worker) ConsumeRequestsRequeue() {
+	for {
+		select {
+		case <-w.stopConsume:
+			return
+		case delivery := <-w.requestsMsgs:
+			processingStartTime := time.Now()
+			var msg models.ClientRequest
+			err := json.Unmarshal([]byte(delivery.Body), &msg)
+			if err != nil {
+				log.Printf("error parsing [ClientRequest] message. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+			log.Printf("%v+\n", msg.Timestamp)
 
+			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
+			classificationStartTime := time.Now()
+			// pytorch classification...
+			classificationLatency := classificationStartTime.Sub(time.Now())
+			totalLatency := transmissionAndQueueLatency + classificationLatency
+
+			classifiedPacket := models.ClassifiedPacket{
+				Metadata:           msg.Metadata,
+				ClassificationTime: classificationLatency,
+				Latency:            totalLatency,
+				WorkerName:         w.name,
+				IsMalicious:        false,
+				Timestamp:          time.Now(),
+			}
+			classificationMessage, err := json.Marshal(classifiedPacket)
+			if err != nil {
+				log.Printf("failed to marshal classification message. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+
+			err = w.channel.Publish(
+				config.PacketExchangeName,
+				config.AlertsQueueRoutingKey,
+				false, // mandatory
+				false, // immediate
+				amqp.Publishing{
+					ContentType: "application/json",
+					Body:        classificationMessage,
+				},
+			)
+			if err != nil {
+				log.Printf("failed to publish message: %v\n", err)
+				delivery.Nack(false, true)
+			}
+
+			w.latencies = append(w.latencies, float64(totalLatency.Milliseconds()))
+			w.processedPackets++
+			delivery.Ack(false)
+		}
+	}
+}
+
+func (w *Worker) Stop() {
 	log.Printf("Stopping worker %s...\n", w.name)
+
 	w.stopConsume <- true
 	if w.channel != nil {
 		if err := w.channel.Close(); err != nil {

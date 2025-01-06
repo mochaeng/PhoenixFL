@@ -22,7 +22,7 @@ func main() {
 		if err := worker.Connect(); err != nil {
 			log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
 		}
-		if err := worker.SetupRabbitMQ(); err != nil {
+		if err := worker.SetupWorker(); err != nil {
 			log.Panicf("could not setup rabbitMQ. Error: %v\n", err)
 		}
 		if err := worker.SetRequestsQueueMessages(); err != nil {

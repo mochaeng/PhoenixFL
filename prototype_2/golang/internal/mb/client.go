@@ -19,14 +19,15 @@ const (
 type Client struct {
 	amqpURL       string
 	messages      []*models.ClientRequest
-	conn          *amqp.Connection
-	channel       *amqp.Channel
 	currentPacket int64
 	acked         int64
 	nacked        int64
 	messageNumber int64
 	hasStopped    bool
-	stopChan      chan struct{}
+
+	conn    *amqp.Connection
+	channel *amqp.Channel
+
 	sync.RWMutex
 }
 
@@ -34,7 +35,6 @@ func NewClient(url string, messages []*models.ClientRequest) *Client {
 	return &Client{
 		amqpURL:  url,
 		messages: messages,
-		stopChan: make(chan struct{}),
 	}
 }
 
@@ -66,16 +66,16 @@ func (c *Client) SetupRabbitMQ() error {
 		return err
 	}
 
-	log.Printf("Declaring [requests_queue] queue %s\n", config.RequestsQueueName)
 	_, err = GetRequestsQueue(c.channel)
 	if err != nil {
 		return err
 	}
 
-	err = BindQueueWithExchange(c.channel, config.RequestsQueueName, config.RequestsQueueRoutingKey, config.PacketExchangeName)
+	err = BindRequestsQueueWithPacketExchange(c.channel)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -105,9 +105,8 @@ func (c *Client) publishMessage() {
 	}
 
 	originalMessage := c.messages[c.currentPacket%int64(len(c.messages))]
-
 	message := &models.ClientRequest{
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now(),
 		Metadata:  originalMessage.Metadata,
 		Packet:    originalMessage.Packet,
 	}
@@ -174,7 +173,7 @@ func (c *Client) retryMessage(deliveryTag uint64) {
 
 	originalMessage := c.messages[(deliveryTag-1)%uint64(len(c.messages))]
 	message := &models.ClientRequest{
-		Timestamp: time.Now().Unix(),
+		Timestamp: time.Now(),
 		Metadata:  originalMessage.Metadata,
 		Packet:    originalMessage.Packet,
 	}
@@ -208,7 +207,6 @@ func (c *Client) Stop() {
 	defer c.Unlock()
 
 	c.hasStopped = true
-	close(c.stopChan)
 
 	log.Printf("Number of ackked packets: %d\n", c.acked)
 
