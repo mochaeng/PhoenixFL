@@ -1,12 +1,13 @@
 package mb
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/mochaeng/phoenix-detector/internal/config"
+	"github.com/mochaeng/phoenix-detector/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -15,23 +16,18 @@ type Worker struct {
 	amqpURL       string
 	conn          *amqp.Connection
 	channel       *amqp.Channel
-	requestsQueue string
-	alertsQueue   string
 	latencies     []float64
 	processedPkgs int
-	ctx           context.Context
-	cancel        context.CancelFunc
+
+	stopConsume   chan bool
+	requestsQueue *amqp.Queue
+	requestsMsgs  <-chan amqp.Delivery
 }
 
-func NewWorker(amqpURL, requestsQueue, alertsQueue string) *Worker {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewWorker(amqpURL string) *Worker {
 	return &Worker{
-		name:          fmt.Sprintf("worker_%s", uuid.NewString()),
-		amqpURL:       amqpURL,
-		requestsQueue: requestsQueue,
-		alertsQueue:   alertsQueue,
-		ctx:           ctx,
-		cancel:        cancel,
+		name:    fmt.Sprintf("worker_%s", uuid.NewString()),
+		amqpURL: amqpURL,
 	}
 }
 
@@ -66,16 +62,72 @@ func (w *Worker) SetupRabbitMQ() error {
 		return err
 	}
 
-	_, err = GetRequestsQueue(w.channel)
+	requestsQueue, err := GetRequestsQueue(w.channel)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Declaring [alerts_queue] queue %s\n", config.RequestsQueueName)
 	_, err = GetAlertsQueue(w.channel)
 	if err != nil {
-		return fmt.Errorf("could not declare [alerts_queue]. Error: %v\n", err)
+		return err
 	}
 
+	w.requestsQueue = requestsQueue
+
 	return nil
+}
+
+func (w *Worker) ConsumeRequestsRequeue() {
+	for {
+		select {
+		case <-w.stopConsume:
+			log.Printf("worker %s has stopped\n", w.name)
+		case delivery := <-w.requestsMsgs:
+			var msg models.ClientRequest
+			err := json.Unmarshal([]byte(delivery.Body), &msg)
+			if err != nil {
+				log.Printf("error parsing message. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+			log.Printf("%v+\n", msg.Metadata)
+			delivery.Ack(false)
+		}
+	}
+}
+
+func (w *Worker) SetRequestsQueueMessages() error {
+	msgs, err := w.channel.Consume(
+		config.RequestsQueueName,
+		"",    // consumer
+		false, // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	if err != nil {
+		return fmt.Errorf("could not consume from queue [requests_queue]. Error: %v\n", err)
+	}
+	w.requestsMsgs = msgs
+	return nil
+}
+
+func (w *Worker) Stop() {
+	if w == nil {
+		return
+	}
+
+	log.Printf("Stopping worker %s...\n", w.name)
+	w.stopConsume <- true
+	if w.channel != nil {
+		if err := w.channel.Close(); err != nil {
+			log.Printf("could not close channel. Error: %v", err)
+		}
+	}
+	if w.conn != nil {
+		if err := w.conn.Close(); err != nil {
+			log.Printf("could not close connection. Error: %v", err)
+		}
+	}
 }

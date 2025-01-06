@@ -39,7 +39,7 @@ func NewClient(url string, messages []*models.ClientRequest) *Client {
 }
 
 func (c *Client) Connect() error {
-	fmt.Printf("Connecting to %s\n", c.amqpURL)
+	log.Printf("Connecting to %s\n", c.amqpURL)
 	conn, err := amqp.Dial(c.amqpURL)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (c *Client) SetupRabbitMQ() error {
 }
 
 func (c *Client) StartPublishing() {
-	fmt.Println("Starting publishing messages")
+	log.Println("Starting publishing messages")
 
 	ticker := time.NewTicker(publishInterval)
 	defer ticker.Stop()
@@ -114,7 +114,7 @@ func (c *Client) publishMessage() {
 
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
-		fmt.Printf("Failed to marshal message: %v\n", err)
+		log.Printf("Failed to marshal message: %v\n", err)
 		return
 	}
 
@@ -129,15 +129,14 @@ func (c *Client) publishMessage() {
 		},
 	)
 	if err != nil {
-		fmt.Printf("Failed to publish message: %v\n", err)
+		log.Printf("Failed to publish message: %v\n", err)
 		c.nacked++
 		return
 	}
 
 	c.currentPacket++
 	c.messageNumber++
-	c.acked++
-	// fmt.Printf("Published message # %d\n", c.messageNumber)
+	// log.Printf("Published message # %d\n", c.messageNumber)
 }
 
 func (c *Client) SetupPublisherConfirms() error {
@@ -211,13 +210,15 @@ func (c *Client) Stop() {
 	c.hasStopped = true
 	close(c.stopChan)
 
+	log.Printf("Number of ackked packets: %d\n", c.acked)
+
 	if c.channel != nil {
-		fmt.Println("Closing channel")
+		log.Println("Closing channel from client")
 		_ = c.channel.Close()
 	}
 
 	if c.conn != nil {
-		fmt.Println("Closing connection")
+		log.Println("Closing connection from client")
 		_ = c.conn.Close()
 	}
 }
