@@ -55,7 +55,7 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-func (c *Client) SetupRabbitMQ() error {
+func (c *Client) SetupClient() error {
 	err := SetQoS(c.channel, 1)
 	if err != nil {
 		return err
@@ -72,6 +72,11 @@ func (c *Client) SetupRabbitMQ() error {
 	}
 
 	err = BindRequestsQueueWithPacketExchange(c.channel)
+	if err != nil {
+		return err
+	}
+
+	err = c.SetupPublisherConfirms()
 	if err != nil {
 		return err
 	}

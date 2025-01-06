@@ -16,12 +16,12 @@ from rpc.helpers import COLUMNS_TO_REMOVE, Metadata, PublishRequest
 class ClientRPC:
     EXCHANGE = "packet"
     EXCHANGE_TYPE = ExchangeType.direct
-    PUBLISH_INTERVAL = 0.002
+    PUBLISH_INTERVAL = 0.005
     QUEUE = "requests_queue"
     ROUTING_KEY = QUEUE
 
     def __init__(self, amqp_url: str, messages: list):
-        signal.signal(signal.SIGINT, self.handle_interrupt)
+        signal.signal(signal.SIGTERM, self.handle_interrupt)
 
         self.url = amqp_url
         # self.packets = packets

@@ -25,9 +25,6 @@ func main() {
 		if err := worker.SetupWorker(); err != nil {
 			log.Panicf("could not setup rabbitMQ. Error: %v\n", err)
 		}
-		if err := worker.SetRequestsQueueMessages(); err != nil {
-			log.Panicf("not possible to set [requests_queue]. Error: %v\n", err)
-		}
 		go worker.ConsumeRequestsRequeue()
 		workers = append(workers, worker)
 	}
@@ -42,18 +39,15 @@ func main() {
 	if err != nil {
 		log.Panicf("failed to parse csv packets. Error: %v\n", err)
 	}
+
 	client := mb.NewClient(config.AmqpURL, messages)
 	err = client.Connect()
 	if err != nil {
 		log.Panicf("Failed to connect: %v\n", err)
 	}
-	err = client.SetupRabbitMQ()
+	err = client.SetupClient()
 	if err != nil {
-		log.Panicf("Failed to set up channel: %v\n", err)
-	}
-	err = client.SetupPublisherConfirms()
-	if err != nil {
-		log.Panicf("Failed to set up publisher confirms: %v\n", err)
+		log.Panicf("Failed to set up client: %v\n", err)
 	}
 
 	log.Println("Client and Workers are ready")

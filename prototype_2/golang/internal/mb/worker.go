@@ -119,7 +119,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				delivery.Nack(false, true)
 				continue
 			}
-			log.Printf("%v+\n", msg.Timestamp)
+			// log.Printf("%v+\n", msg.Timestamp)
 
 			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
 			classificationStartTime := time.Now()
