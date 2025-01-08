@@ -1,3 +1,5 @@
 __pycache__/
 
 data/workers/*
+.ruff_cache
+.venv/

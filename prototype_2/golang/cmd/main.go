@@ -58,7 +58,7 @@ func main() {
 			switch sig {
 			case syscall.SIGUSR1:
 				log.Println("Client start to publish messages...")
-				go client.StartPublishing()
+				// go client.StartPublishing()
 			case syscall.SIGTERM, os.Interrupt:
 				log.Println("Stopping client and workers")
 				client.Stop()

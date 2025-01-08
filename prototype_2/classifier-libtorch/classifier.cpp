@@ -4,8 +4,7 @@
 
 class Model {
   torch::jit::script::Module model;
-  torch::Device device =
-      torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+  torch::Device device = torch::kCUDA;
 
 public:
   Model(const std::string &modelFile);
@@ -14,8 +13,7 @@ public:
 
 Model::Model(const std::string &modelFile) {
   try {
-    model = torch::jit::load(modelFile);
-    model.to(this->device);
+    model = torch::jit::load(modelFile, this->device);
   } catch (const c10::Error &e) {
     std::cerr << "error loading the model. Erorr: " << e.what() << std::endl;
     throw std::invalid_argument("Invalid model file.");

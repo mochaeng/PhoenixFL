@@ -13,4 +13,4 @@ cmake --build . --config Release
 ./example-app
 ```
 
-Example: `CUDACXX=/usr/local/cuda-12.4/bin/nvcc cmake -DCMAKE_PREFIX_PATH=/home/campos/cpp_libs/libtorch ..`
+Example: `CUDACXX=/usr/local/cuda-12.4/bin/nvcc cmake -DCMAKE_PREFIX_PATH=/usr/lib/libtorch ..`

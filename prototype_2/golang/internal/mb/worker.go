@@ -131,14 +131,12 @@ func (w *Worker) ConsumeRequestsRequeue() {
 			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
 
 			classificationStartTime := time.Now()
-			// pytorch classification...
 			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
 			if err != nil {
 				log.Printf("prediction failed. Error: %v\n", err)
 				delivery.Nack(false, true)
 				continue
 			}
-			fmt.Println(isMalicious)
 			classificationLatency := time.Now().Sub(classificationStartTime)
 			totalLatency := transmissionAndQueueLatency + classificationLatency
 
