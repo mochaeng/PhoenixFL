@@ -119,6 +119,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 			return
 		case delivery := <-w.requestsMsgs:
 			processingStartTime := time.Now()
+
 			var msg models.ClientRequest
 			err := json.Unmarshal([]byte(delivery.Body), &msg)
 			if err != nil {
@@ -126,13 +127,19 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				delivery.Nack(false, true)
 				continue
 			}
-			// log.Printf("%v+\n", msg.Timestamp)
 
 			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
-			classificationStartTime := time.Now()
 
+			classificationStartTime := time.Now()
 			// pytorch classification...
-			classificationLatency := classificationStartTime.Sub(time.Now())
+			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
+			if err != nil {
+				log.Printf("prediction failed. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+			fmt.Println(isMalicious)
+			classificationLatency := time.Now().Sub(classificationStartTime)
 			totalLatency := transmissionAndQueueLatency + classificationLatency
 
 			classifiedPacket := models.ClassifiedPacket{
@@ -140,7 +147,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				ClassificationTime: classificationLatency,
 				Latency:            totalLatency,
 				WorkerName:         w.name,
-				IsMalicious:        false,
+				IsMalicious:        isMalicious,
 				Timestamp:          time.Now(),
 			}
 			classificationMessage, err := json.Marshal(classifiedPacket)
@@ -163,6 +170,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 			if err != nil {
 				log.Printf("failed to publish message: %v\n", err)
 				delivery.Nack(false, true)
+				continue
 			}
 
 			w.latencies = append(w.latencies, float64(totalLatency.Milliseconds()))
@@ -176,14 +184,18 @@ func (w *Worker) Stop() {
 	log.Printf("Stopping worker %s...\n", w.name)
 
 	w.stopConsume <- true
+
 	if w.channel != nil {
 		if err := w.channel.Close(); err != nil {
 			log.Printf("could not close channel. Error: %v", err)
 		}
 	}
+
 	if w.conn != nil {
 		if err := w.conn.Close(); err != nil {
 			log.Printf("could not close connection. Error: %v", err)
 		}
 	}
+
+	w.classifier.Delete()
 }

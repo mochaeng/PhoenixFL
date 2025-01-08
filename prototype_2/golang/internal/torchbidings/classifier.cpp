@@ -4,7 +4,8 @@
 
 class Model {
   torch::jit::script::Module model;
-  torch::Device device = torch::kCPU;
+  torch::Device device =
+      torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
 
 public:
   Model(const std::string &modelFile);
@@ -19,7 +20,7 @@ Model::Model(const std::string &modelFile) {
   }
 
   try {
-    model = torch::jit::load(modelFile, torch::kCPU);
+    model = torch::jit::load(modelFile, this->device);
   } catch (const c10::Error &e) {
     std::cerr << "could not load model. Erorr: " << e.what() << std::endl;
     throw std::invalid_argument("Invalid model file.");
@@ -33,9 +34,12 @@ bool Model::PredicIsPositiveBinary(float *inputData, int numFeatures) {
 
   this->model.eval();
   torch::Tensor output = this->model.forward({input}).toTensor();
-  output = torch::sigmoid(output);
+  output = torch::round(torch::sigmoid(output));
 
-  return output.item<float>() >= 0.5;
+  std::cout << output.item<float>() << std::endl;
+
+  // return output.item<float>() >= 0.5;
+  return output.item<float>() == 1.0;
 }
 
 mModel NewModel(const char *modelFile) {

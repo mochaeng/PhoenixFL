@@ -36,18 +36,18 @@ func ParseCSV(filePath string, columnsToRemove []string) ([]*models.ClientReques
 		}
 
 		metadata := make(map[string]string)
-		packet := make(map[string]float64)
+		packetValues := make([]float32, 0, len(record))
 
 		for i, value := range record {
 			column := headers[i]
 			if _, isRemove := removeSet[column]; isRemove {
 				metadata[column] = value
 			} else {
-				floatValue, err := strconv.ParseFloat(value, 64)
+				floatValue, err := strconv.ParseFloat(value, 32)
 				if err != nil {
 					log.Printf("could not convert string value to float. Error: %v\n", err)
 				}
-				packet[column] = floatValue
+				packetValues = append(packetValues, float32(floatValue))
 			}
 		}
 
@@ -67,7 +67,7 @@ func ParseCSV(filePath string, columnsToRemove []string) ([]*models.ClientReques
 				DestIP:     metadata["IPV4_DST_ADDR"],
 				DestPort:   int(destPort),
 			},
-			Packet: packet,
+			Packet: packetValues,
 		})
 	}
 

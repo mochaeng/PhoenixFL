@@ -17,14 +17,12 @@ type Classifier struct {
 }
 
 func NewModel(modelFile string) (*Classifier, error) {
-	// LDFLAGS: -lstdc++ -L/usr/local/libtorch/lib -ltorch -ltorch_cpu -ltorch_cuda -lcudart -lc10
-	// CXXFLAGS: -std=c++17 -I${SRCDIR} -g -O3
 	cModelFile := C.CString(modelFile)
 	defer C.free(unsafe.Pointer(cModelFile))
 
 	model := C.NewModel(cModelFile)
 	if model == nil {
-		return nil, errors.New("failed to load model")
+		return nil, errors.New("failed to load pytorch model")
 	}
 	return &Classifier{model: model}, nil
 }

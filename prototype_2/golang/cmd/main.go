@@ -35,7 +35,7 @@ func main() {
 		"L4_SRC_PORT",
 		"L4_DST_PORT",
 	}
-	messages, err := parser.ParseCSV("../data/10_000-raw-packets.csv", columnsToRemove)
+	messages, err := parser.ParseCSV("../../data/10_000-raw-packets.csv", columnsToRemove)
 	if err != nil {
 		log.Panicf("failed to parse csv packets. Error: %v\n", err)
 	}
