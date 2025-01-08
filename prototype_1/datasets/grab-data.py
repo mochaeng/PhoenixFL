@@ -1,3 +1,4 @@
+import json
 import os
 
 import joblib
@@ -35,6 +36,16 @@ if __name__ == "__main__":
     scaler = scaler.fit(df_for_scale.values, df_for_scale.columns)
     scaler_file_path = os.path.join(PATH_TO_SAVE, "scaler.pkl")
     joblib.dump(scaler, scaler_file_path)
+
+    scaler_data = {
+        "min": scaler.min_.tolist(),
+        "scale": scaler.scale_.tolist(),
+    }
+
+    with open(f"{PATH_TO_SAVE}/scaler.json", "w") as f:
+        json.dump(scaler_data, f)
+
+    print(scaler_data)
 
     # print(lines["Attack"].value_counts())
 

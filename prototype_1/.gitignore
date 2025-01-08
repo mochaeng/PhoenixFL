@@ -7,7 +7,7 @@
 # sample datasets from other sources
 **/pre-processed/datasets/**
 **/pre-processed/ita/*
-**/pre-processed/std/* 
+**/pre-processed/std/*
 **/pre-processed/train-test/*
 
 # no temporary files for federated learning
@@ -19,3 +19,5 @@
 /.idea/
 
 **/__pycache__/
+
+.ruff_cache/
