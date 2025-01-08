@@ -1,7 +1,8 @@
 package config
 
 const (
-	AmqpURL = "amqp://guest:guest@localhost:5672/"
+	AmqpURL   = "amqp://guest:guest@localhost:5672/"
+	ModelPath = "../data/fedmedian_model.pt"
 
 	PrefetchCount = 1
 

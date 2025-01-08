@@ -1,7 +1,7 @@
 package torchbidings
 
-// #cgo LDFLAGS: -lstdc++ -L/usr/local/libtorch/lib -ltorch -ltorch_cpu -ltorch_cuda -lcudart -lc10
-// #cgo CXXFLAGS: -std=c++17 -I${SRCDIR} -g -O3
+// #cgo LDFLAGS: -L./build -lclassifier -ltorch -ltorch_cpu -ltorch_cuda -lcudart -lc10
+// #cgo CXXFLAGS: -std=c++17
 // #cgo CFLAGS: -D_GLIBCXX_USE_CXX11_ABI=1
 // #include <stdio.h>
 // #include <stdlib.h>
@@ -17,6 +17,8 @@ type Classifier struct {
 }
 
 func NewModel(modelFile string) (*Classifier, error) {
+	// LDFLAGS: -lstdc++ -L/usr/local/libtorch/lib -ltorch -ltorch_cpu -ltorch_cuda -lcudart -lc10
+	// CXXFLAGS: -std=c++17 -I${SRCDIR} -g -O3
 	cModelFile := C.CString(modelFile)
 	defer C.free(unsafe.Pointer(cModelFile))
 

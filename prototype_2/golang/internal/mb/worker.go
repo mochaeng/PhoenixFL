@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mochaeng/phoenix-detector/internal/config"
 	"github.com/mochaeng/phoenix-detector/internal/models"
+	"github.com/mochaeng/phoenix-detector/internal/torchbidings"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -18,6 +19,7 @@ type Worker struct {
 	latencies        []float64
 	processedPackets int
 	stopConsume      chan bool
+	classifier       *torchbidings.Classifier
 
 	conn          *amqp.Connection
 	channel       *amqp.Channel
@@ -26,11 +28,16 @@ type Worker struct {
 	requestsMsgs  <-chan amqp.Delivery
 }
 
-func NewWorker(amqpURL string) *Worker {
+func NewWorker(amqpURL string, modelFile string) *Worker {
+	classifier, err := torchbidings.NewModel(modelFile)
+	if err != nil {
+		log.Panicf("could not load pytorch model. Error: %v\n", err)
+	}
 	return &Worker{
 		name:        fmt.Sprintf("worker_%s", uuid.NewString()),
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
+		classifier:  classifier,
 	}
 }
 
@@ -123,6 +130,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 
 			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
 			classificationStartTime := time.Now()
+
 			// pytorch classification...
 			classificationLatency := classificationStartTime.Sub(time.Now())
 			totalLatency := transmissionAndQueueLatency + classificationLatency

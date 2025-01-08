@@ -18,7 +18,7 @@ func main() {
 	numWorkers := 1
 	workers := make([]*mb.Worker, 0, numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		worker := mb.NewWorker(config.AmqpURL)
+		worker := mb.NewWorker(config.AmqpURL, config.ModelPath)
 		if err := worker.Connect(); err != nil {
 			log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
 		}
@@ -35,7 +35,7 @@ func main() {
 		"L4_SRC_PORT",
 		"L4_DST_PORT",
 	}
-	messages, err := parser.ParseCSV("../../data/10_000-raw-packets.csv", columnsToRemove)
+	messages, err := parser.ParseCSV("../data/10_000-raw-packets.csv", columnsToRemove)
 	if err != nil {
 		log.Panicf("failed to parse csv packets. Error: %v\n", err)
 	}
