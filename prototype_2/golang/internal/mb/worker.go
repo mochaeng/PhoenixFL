@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/mochaeng/phoenix-detector/internal/config"
 	"github.com/mochaeng/phoenix-detector/internal/models"
+	"github.com/mochaeng/phoenix-detector/internal/parser"
+	"github.com/mochaeng/phoenix-detector/internal/stats"
 	"github.com/mochaeng/phoenix-detector/internal/torchbidings"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -20,6 +25,7 @@ type Worker struct {
 	processedPackets int
 	stopConsume      chan bool
 	classifier       *torchbidings.Classifier
+	statsPath        string
 
 	conn          *amqp.Connection
 	channel       *amqp.Channel
@@ -38,6 +44,7 @@ func NewWorker(amqpURL string, modelFile string) *Worker {
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
 		classifier:  classifier,
+		statsPath:   "../../data/workers",
 	}
 }
 
@@ -126,6 +133,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				continue
 			}
 			convertedTimestamp := time.Unix(int64(msg.Timestamp), 0)
+			fmt.Println(convertedTimestamp.Second())
 			transmissionAndQueueLatency := time.Now().Sub(convertedTimestamp)
 
 			classificationStartTime := time.Now()
@@ -169,11 +177,71 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				continue
 			}
 
-			w.latencies = append(w.latencies, float64(totalLatency.Milliseconds()))
+			w.latencies = append(w.latencies, float64(totalLatency.Seconds()))
 			w.processedPackets++
 			delivery.Ack(false)
 		}
 	}
+}
+
+func (w *Worker) SaveLatencyStats() error {
+	fileName := fmt.Sprintf("worker_%s_latencies.csv", w.name)
+	filePath := filepath.Join(w.statsPath, fileName)
+
+	writer, file, err := parser.CreateCSVWriter(filePath)
+	if err != nil {
+		return fmt.Errorf("could not create CSV writer. Error: %v\n", err)
+	}
+	defer file.Close()
+
+	header := []string{"latency"}
+	err = parser.WriteCSVRecord(writer, header)
+	if err != nil {
+		return fmt.Errorf("could not write headers. Erorr: %v\n", err)
+	}
+
+	for _, latency := range w.latencies {
+		convertedLatency := strconv.FormatFloat(latency, 'f', -1, 64)
+		err = parser.WriteCSVRecord(writer, []string{convertedLatency})
+		if err != nil {
+			return fmt.Errorf("could not write latency. Error: %v\n", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return fmt.Errorf("could not flush writer. Error: %v\n", err)
+	}
+
+	return nil
+}
+
+func (w *Worker) SaveMetrics() error {
+	fileName := fmt.Sprintf("worker_%s_metrics.json", w.name)
+	filePath := filepath.Join(w.statsPath, fileName)
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("could not create file. Error: %v\n", err)
+	}
+	defer file.Close()
+
+	allMetrics := struct {
+		Metrics          *stats.Metrics
+		ProcessedPackets int
+	}{
+		Metrics:          stats.ComputeLatenciesMetrics(w.latencies),
+		ProcessedPackets: w.processedPackets,
+	}
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "	")
+	err = encoder.Encode(allMetrics)
+	if err != nil {
+		return fmt.Errorf("could not write metrics to json. Error: %v\n", err)
+	}
+
+	return nil
 }
 
 func (w *Worker) Stop() {
@@ -183,15 +251,23 @@ func (w *Worker) Stop() {
 
 	if w.channel != nil {
 		if err := w.channel.Close(); err != nil {
-			log.Printf("could not close channel. Error: %v", err)
+			log.Printf("could not close channel. Error: %v\n", err)
 		}
 	}
 
 	if w.conn != nil {
 		if err := w.conn.Close(); err != nil {
-			log.Printf("could not close connection. Error: %v", err)
+			log.Printf("could not close connection. Error: %v\n", err)
 		}
 	}
 
 	w.classifier.Delete()
+
+	if err := w.SaveLatencyStats(); err != nil {
+		log.Printf("could not write latencies. Error: %v\n", err)
+	}
+
+	if err := w.SaveMetrics(); err != nil {
+		log.Printf("could not write metrics. Error: %v\n", err)
+	}
 }

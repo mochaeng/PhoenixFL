@@ -10,6 +10,22 @@ import (
 	"github.com/mochaeng/phoenix-detector/internal/models"
 )
 
+func CreateCSVWriter(filePath string) (*csv.Writer, *os.File, error) {
+	f, err := os.Create(filePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	return csv.NewWriter(f), f, nil
+}
+
+func WriteCSVRecord(writer *csv.Writer, record []string) error {
+	err := writer.Write(record)
+	if err != nil {
+		return fmt.Errorf("could not write record. Error: %v\n", err)
+	}
+	return nil
+}
+
 func ParseCSV(filePath string, columnsToRemove []string) ([]*models.ClientRequest, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
