@@ -111,7 +111,7 @@ func (c *Client) publishMessage() {
 
 	originalMessage := c.messages[c.currentPacket%int64(len(c.messages))]
 	message := &models.ClientRequest{
-		Timestamp: time.Now(),
+		Timestamp: float64(time.Now().Unix()),
 		Metadata:  originalMessage.Metadata,
 		Packet:    originalMessage.Packet,
 	}
@@ -178,7 +178,7 @@ func (c *Client) retryMessage(deliveryTag uint64) {
 
 	originalMessage := c.messages[(deliveryTag-1)%uint64(len(c.messages))]
 	message := &models.ClientRequest{
-		Timestamp: time.Now(),
+		Timestamp: float64(time.Now().Unix()),
 		Metadata:  originalMessage.Metadata,
 		Packet:    originalMessage.Packet,
 	}

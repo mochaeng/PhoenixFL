@@ -208,6 +208,8 @@ class Worker:
             "timestamp": time.time(),
         }
 
+        print(isMalicious)
+
         def publish_to_alerts():
             if self._channel is not None and self._channel.is_open:
                 self._channel.basic_publish(
@@ -275,7 +277,7 @@ if __name__ == "__main__":
     scaler_path = "data/scaler.pkl"
     classifier = PytorchClassifier(model_path=model_path, scaler_path=scaler_path)
 
-    num_workers = 5
+    num_workers = 1
     executor = ThreadPoolExecutor(max_workers=num_workers)
     consumers = []
     for _ in range(num_workers):

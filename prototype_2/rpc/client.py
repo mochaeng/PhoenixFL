@@ -24,7 +24,6 @@ class ClientRPC:
         signal.signal(signal.SIGTERM, self.handle_interrupt)
 
         self.url = amqp_url
-        # self.packets = packets
         self.messages = messages
         self.connection = None
         self.channel = None
@@ -190,7 +189,7 @@ class ClientRPC:
         message: PublishRequest = self.messages[
             self.current_packet % len(self.messages)
         ]
-        message["send_timestamp"] = str(time.time())
+        message["send_timestamp"] = time.time()
         encoded_message = json.dumps(message).encode()
 
         self.channel.basic_publish(
@@ -252,7 +251,7 @@ if __name__ == "__main__":
         packet = row.drop(COLUMNS_TO_REMOVE).to_dict()
         data = {
             "metadata": metadata,
-            "packet": packet,
+            "packet": [value for _, value in packet.items()],
         }
         messages.append(data)
 

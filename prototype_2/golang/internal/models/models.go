@@ -10,11 +10,9 @@ type MetadataRequest struct {
 }
 
 type ClientRequest struct {
-	Timestamp time.Time `json:"send_timestamp"`
-	// Metadata  map[string]interface{} `json:"metadata"`
-	Metadata MetadataRequest `json:"metadata"`
-	// Packet   map[string]float64 `json:"packet"`
-	Packet []float32 `json:"packet"`
+	Timestamp float64         `json:"send_timestamp"`
+	Metadata  MetadataRequest `json:"metadata"`
+	Packet    []float32       `json:"packet"`
 }
 
 type ClassifiedPacket struct {

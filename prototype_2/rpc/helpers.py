@@ -16,6 +16,6 @@ class Metadata(TypedDict):
 
 
 class PublishRequest(TypedDict):
-    send_timestamp: str
-    packet: dict
+    send_timestamp: float
+    packet: list
     metadata: Metadata

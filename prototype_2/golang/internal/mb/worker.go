@@ -118,8 +118,6 @@ func (w *Worker) ConsumeRequestsRequeue() {
 		case <-w.stopConsume:
 			return
 		case delivery := <-w.requestsMsgs:
-			processingStartTime := time.Now()
-
 			var msg models.ClientRequest
 			err := json.Unmarshal([]byte(delivery.Body), &msg)
 			if err != nil {
@@ -127,8 +125,8 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				delivery.Nack(false, true)
 				continue
 			}
-
-			transmissionAndQueueLatency := processingStartTime.Sub(msg.Timestamp)
+			convertedTimestamp := time.Unix(int64(msg.Timestamp), 0)
+			transmissionAndQueueLatency := time.Now().Sub(convertedTimestamp)
 
 			classificationStartTime := time.Now()
 			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
@@ -139,6 +137,8 @@ func (w *Worker) ConsumeRequestsRequeue() {
 			}
 			classificationLatency := time.Now().Sub(classificationStartTime)
 			totalLatency := transmissionAndQueueLatency + classificationLatency
+
+			fmt.Println(isMalicious)
 
 			classifiedPacket := models.ClassifiedPacket{
 				Metadata:           msg.Metadata,

@@ -9,9 +9,8 @@ class PytorchClassifier:
         self.model: torch.nn.Module = torch.jit.load(model_path)
         self.scaler: MinMaxScaler = joblib.load(scaler_path)
 
-    def predict_is_positive_binary(self, data: dict):
-        values_from_features = [value for _, value in data.items()]
-        values = np.array([values_from_features])
+    def predict_is_positive_binary(self, packet_values: list):
+        values = np.array([packet_values])
         scaled_values = self.scaler.transform(values)
         tensor_values = torch.tensor(scaled_values, dtype=torch.float32).to("cuda")
         self.model.eval()
