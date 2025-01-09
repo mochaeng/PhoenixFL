@@ -138,8 +138,6 @@ func (w *Worker) ConsumeRequestsRequeue() {
 			classificationLatency := time.Now().Sub(classificationStartTime)
 			totalLatency := transmissionAndQueueLatency + classificationLatency
 
-			fmt.Println(isMalicious)
-
 			classifiedPacket := models.ClassifiedPacket{
 				Metadata:           msg.Metadata,
 				ClassificationTime: classificationLatency,
