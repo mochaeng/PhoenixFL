@@ -19,11 +19,15 @@ const (
 type Client struct {
 	amqpURL       string
 	messages      []*models.ClientRequest
-	currentPacket int64
-	acked         int64
-	nacked        int64
-	messageNumber int64
+	currentPacket uint64
+	acked         uint64
+	nacked        uint64
+	messageNumber uint64
 	hasStopped    bool
+
+	outstandingMsgsLimit int
+	outstandingConfirms  map[uint64]*models.ClientRequest
+	nackMsgs             *ConcurrentQueue[*models.ClientRequest]
 
 	conn    *amqp.Connection
 	channel *amqp.Channel
@@ -32,9 +36,13 @@ type Client struct {
 }
 
 func NewClient(url string, messages []*models.ClientRequest) *Client {
+	size := 100
 	return &Client{
-		amqpURL:  url,
-		messages: messages,
+		amqpURL:              url,
+		messages:             messages,
+		outstandingMsgsLimit: size,
+		outstandingConfirms:  make(map[uint64]*models.ClientRequest),
+		nackMsgs:             NewConcurrentQueue[*models.ClientRequest](),
 	}
 }
 
@@ -76,10 +84,13 @@ func (c *Client) SetupClient() error {
 		return err
 	}
 
-	err = c.SetupPublisherConfirms()
+	confirmations, err := SetupPublisherConfirms(c.channel, c.outstandingMsgsLimit)
 	if err != nil {
 		return err
 	}
+
+	go c.handleAcknowledgments(confirmations)
+	go c.handleNotAcknowledgedMsgs()
 
 	return nil
 }
@@ -91,36 +102,44 @@ func (c *Client) StartPublishing() {
 	defer ticker.Stop()
 
 	for {
+		c.RLock()
 		if c.hasStopped {
+			c.RUnlock()
 			return
 		}
+		c.RUnlock()
+
 		select {
 		case <-ticker.C:
-			c.publishMessage()
+			if err := c.publishMessage(); err != nil {
+				log.Printf("could not publish message. Error: %v\n", err)
+			}
 		}
 	}
 }
 
-func (c *Client) publishMessage() {
+func (c *Client) publishMessage() error {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.hasStopped {
-		return
+		return nil
 	}
 
-	originalMessage := c.messages[c.currentPacket%int64(len(c.messages))]
+	originalMessage := c.messages[c.currentPacket%uint64(len(c.messages))]
 	message := &models.ClientRequest{
 		Timestamp: float64(time.Now().Unix()),
 		Metadata:  originalMessage.Metadata,
 		Packet:    originalMessage.Packet,
 	}
-
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("Failed to marshal message: %v\n", err)
-		return
+		return fmt.Errorf("failed to marshal message: %w\n", err)
 	}
+	c.currentPacket++
+
+	sequenceNumber := c.channel.GetNextPublishSeqNo()
+	c.outstandingConfirms[sequenceNumber] = originalMessage
 
 	err = c.channel.Publish(
 		config.PacketExchangeName,
@@ -133,25 +152,30 @@ func (c *Client) publishMessage() {
 		},
 	)
 	if err != nil {
-		log.Printf("Failed to publish message: %v\n", err)
-		c.nacked++
-		return
+		return fmt.Errorf("failed to publish message: %w\n", err)
 	}
 
-	c.currentPacket++
-	c.messageNumber++
-	// log.Printf("Published message # %d\n", c.messageNumber)
+	return nil
 }
 
-func (c *Client) SetupPublisherConfirms() error {
-	log.Println("Enabling publisher confirmations")
-	if err := c.channel.Confirm(false); err != nil {
-		return fmt.Errorf("failed to enable publisher confirmations: %v", err)
-	}
+func (c *Client) handleNotAcknowledgedMsgs() {
+	for {
+		c.RLock()
+		if c.hasStopped {
+			c.RUnlock()
+			return
+		}
+		c.RUnlock()
 
-	confirmations := c.channel.NotifyPublish(make(chan amqp.Confirmation, 1))
-	go c.handleAcknowledgments(confirmations)
-	return nil
+		c.nackMsgs.WaitForItem()
+		for {
+			msg, ok := c.nackMsgs.Dequeue()
+			if !ok {
+
+			}
+			c.retryMessage(msg)
+		}
+	}
 }
 
 func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
@@ -160,33 +184,43 @@ func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
 			// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
 			c.Lock()
 			c.acked++
+			delete(c.outstandingConfirms, confirmation.DeliveryTag)
 			c.Unlock()
 		} else {
-			log.Printf("Message with delivery tag %d not acknowledged. Retrying...\n", confirmation.DeliveryTag)
-			c.retryMessage(confirmation.DeliveryTag)
+			log.Printf(
+				"Message with delivery tag [%d] not acknowledged. Retrying...\n",
+				confirmation.DeliveryTag,
+			)
+			c.Lock()
+			item, exists := c.outstandingConfirms[confirmation.DeliveryTag]
+			if !exists || item == nil {
+				log.Printf("no corresponding outstanding message for delivery tag [%d]", confirmation.DeliveryTag)
+				c.Unlock()
+				continue
+			}
+			c.nacked++
+			c.nackMsgs.Enqueue(item)
+			c.Unlock()
 		}
 	}
 }
 
-func (c *Client) retryMessage(deliveryTag uint64) {
+func (c *Client) retryMessage(originalMsg *models.ClientRequest) error {
 	c.Lock()
 	defer c.Unlock()
 
 	if c.hasStopped {
-		return
+		return nil
 	}
 
-	originalMessage := c.messages[(deliveryTag-1)%uint64(len(c.messages))]
 	message := &models.ClientRequest{
 		Timestamp: float64(time.Now().Unix()),
-		Metadata:  originalMessage.Metadata,
-		Packet:    originalMessage.Packet,
+		Metadata:  originalMsg.Metadata,
+		Packet:    originalMsg.Packet,
 	}
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("Failed to marshal message for retry: %v\n", err)
-		c.nacked++
-		return
+		return fmt.Errorf("failed to marshal message for retry: %w\n", err)
 	}
 
 	err = c.channel.Publish(
@@ -200,11 +234,10 @@ func (c *Client) retryMessage(deliveryTag uint64) {
 		},
 	)
 	if err != nil {
-		log.Printf("Failed to publish message during retry: %v\n", err)
-		c.nacked++
-		return
+		return fmt.Errorf("failed to publish message during retry. Error: %w\n", err)
 	}
-	log.Printf("Retried message with delivery tag %d successfully\n", deliveryTag)
+
+	return nil
 }
 
 func (c *Client) Stop() {
