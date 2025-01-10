@@ -121,3 +121,12 @@ func BindAlertsQueueWithPacketExchange(channel *amqp.Channel) error {
 	}
 	return nil
 }
+
+func SetupPublisherConfirms(channel *amqp.Channel, chanSize int) (<-chan amqp.Confirmation, error) {
+	log.Println("Enabling publisher confirmations")
+	if err := channel.Confirm(false); err != nil {
+		return nil, fmt.Errorf("failed to enable publisher confirmations. Error: %w\n", err)
+	}
+	confirmations := channel.NotifyPublish(make(chan amqp.Confirmation, chanSize))
+	return confirmations, nil
+}
