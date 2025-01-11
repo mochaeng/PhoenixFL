@@ -32,19 +32,20 @@ type Worker struct {
 	requestsQueue *amqp.Queue
 	alertsQueue   *amqp.Queue
 	requestsMsgs  <-chan amqp.Delivery
+	confirmations <-chan amqp.Confirmation
 }
 
-func NewWorker(amqpURL string, modelFile string) *Worker {
+func NewWorker(amqpURL, modelFile, statsPath string) *Worker {
 	classifier, err := torchbidings.NewModel(modelFile)
 	if err != nil {
 		log.Panicf("could not load pytorch model. Error: %v\n", err)
 	}
 	return &Worker{
-		name:        fmt.Sprintf("worker_%s", uuid.NewString()),
+		name:        fmt.Sprintf("worker-%s", uuid.NewString()),
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
 		classifier:  classifier,
-		statsPath:   "../../data/workers",
+		statsPath:   statsPath,
 	}
 }
 
@@ -69,7 +70,13 @@ func (w *Worker) SetupWorker() error {
 		return config.ErrInvalidChannel
 	}
 
-	err := SetQoS(w.channel, 1)
+	confirmations, err := SetupPublisherConfirms(w.channel, 100)
+	if err != nil {
+		return err
+	}
+	w.confirmations = confirmations
+
+	err = SetQoS(w.channel, 1)
 	if err != nil {
 		return err
 	}
@@ -83,11 +90,13 @@ func (w *Worker) SetupWorker() error {
 	if err != nil {
 		return err
 	}
+	w.requestsQueue = requestsQueue
 
 	alertsQueue, err := GetAlertsQueue(w.channel)
 	if err != nil {
 		return err
 	}
+	w.alertsQueue = alertsQueue
 
 	err = BindRequestsQueueWithPacketExchange(w.channel)
 	if err != nil {
@@ -109,17 +118,14 @@ func (w *Worker) SetupWorker() error {
 		nil,   // args
 	)
 	if err != nil {
-		return fmt.Errorf("could not consume from queue [requests_queue]. Error: %v\n", err)
+		return fmt.Errorf("could not consume from queue [requests_queue]. Error: %w\n", err)
 	}
-
-	w.requestsQueue = requestsQueue
-	w.alertsQueue = alertsQueue
 	w.requestsMsgs = requestsMsgs
 
 	return nil
 }
 
-func (w *Worker) ConsumeRequestsRequeue() {
+func (w *Worker) ConsumeRequestsQueue() {
 	for {
 		select {
 		case <-w.stopConsume:
@@ -132,9 +138,9 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				delivery.Nack(false, true)
 				continue
 			}
-			convertedTimestamp := time.Unix(int64(msg.Timestamp), 0)
-			fmt.Println(convertedTimestamp.Second())
-			transmissionAndQueueLatency := time.Now().Sub(convertedTimestamp)
+
+			convertedSentTimestamp := time.Unix(int64(msg.Timestamp), 0)
+			transmissionAndQueueLatency := time.Now().Sub(convertedSentTimestamp)
 
 			classificationStartTime := time.Now()
 			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
@@ -144,12 +150,13 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				continue
 			}
 			classificationLatency := time.Now().Sub(classificationStartTime)
-			totalLatency := transmissionAndQueueLatency + classificationLatency
 
+			latency := transmissionAndQueueLatency + classificationLatency
+			publishAlertStartTime := time.Now()
 			classifiedPacket := models.ClassifiedPacket{
 				Metadata:           msg.Metadata,
 				ClassificationTime: classificationLatency,
-				Latency:            totalLatency,
+				Latency:            latency,
 				WorkerName:         w.name,
 				IsMalicious:        isMalicious,
 				Timestamp:          time.Now(),
@@ -161,7 +168,7 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				continue
 			}
 
-			err = w.channel.Publish(
+			_, err = w.channel.PublishWithDeferredConfirm(
 				config.PacketExchangeName,
 				config.AlertsQueueRoutingKey,
 				false, // mandatory
@@ -177,8 +184,24 @@ func (w *Worker) ConsumeRequestsRequeue() {
 				continue
 			}
 
-			w.latencies = append(w.latencies, float64(totalLatency.Seconds()))
+			select {
+			case confirmed := <-w.confirmations:
+				if !confirmed.Ack {
+					log.Print("message was not acknowledged by rabbitMQ\n")
+					delivery.Nack(false, true)
+					continue
+				}
+			case <-time.After(5 * time.Second):
+				log.Print("timeout waiting for message confirmation\n")
+				delivery.Nack(false, true)
+				continue
+			}
+
+			publishAlertLatency := time.Now().Sub(publishAlertStartTime)
+			inducedLatency := latency + publishAlertLatency
+			w.latencies = append(w.latencies, float64(inducedLatency.Seconds()))
 			w.processedPackets++
+
 			delivery.Ack(false)
 		}
 	}
