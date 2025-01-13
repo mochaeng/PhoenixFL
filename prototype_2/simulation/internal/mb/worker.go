@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+type WorkerTimeMetrics struct {
+	StartTime           time.Time
+	EndTime             time.Time
+	TotalProcessingTime time.Duration
+}
+
 type Worker struct {
 	name             string
 	amqpURL          string
@@ -26,6 +33,10 @@ type Worker struct {
 	stopConsume      chan bool
 	classifier       *torchbidings.Classifier
 	statsPath        string
+	timeMetrics      *WorkerTimeMetrics
+	isIdle           atomic.Bool
+	idleTimeout      time.Duration
+	hasFinished      atomic.Bool
 
 	conn          *amqp.Connection
 	channel       *amqp.Channel
@@ -40,13 +51,18 @@ func NewWorker(amqpURL, modelFile, statsPath string) *Worker {
 	if err != nil {
 		log.Panicf("could not load pytorch model. Error: %v\n", err)
 	}
-	return &Worker{
+	w := &Worker{
 		name:        fmt.Sprintf("worker-%s", uuid.NewString()),
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
 		classifier:  classifier,
 		statsPath:   statsPath,
+		timeMetrics: &WorkerTimeMetrics{},
+		idleTimeout: 1 * time.Second,
 	}
+	w.isIdle.Store(false)
+	w.hasFinished.Store(false)
+	return w
 }
 
 func (w *Worker) Connect() error {
@@ -126,11 +142,42 @@ func (w *Worker) SetupWorker() error {
 }
 
 func (w *Worker) ConsumeRequestsQueue() {
+	w.timeMetrics.StartTime = time.Now()
+	idleTimer := time.NewTimer(w.idleTimeout)
+
 	for {
 		select {
 		case <-w.stopConsume:
 			return
-		case delivery := <-w.requestsMsgs:
+		case <-idleTimer.C:
+			if !w.isIdle.Load() {
+				log.Printf("worker [%s] has been idle for [%v], processed [%d] packets\n", w.name, w.idleTimeout, w.processedPackets)
+
+				w.isIdle.Store(true)
+				w.timeMetrics.EndTime = time.Now()
+				w.timeMetrics.TotalProcessingTime = w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime)
+				w.Stop()
+
+				return
+			}
+			idleTimer.Reset(w.idleTimeout)
+		case delivery, ok := <-w.requestsMsgs:
+			if !ok {
+				continue
+			}
+			if w.hasFinished.Load() {
+				return
+			}
+
+			if !idleTimer.Stop() {
+				select {
+				case <-idleTimer.C:
+				default:
+				}
+			}
+			idleTimer.Reset(w.idleTimeout)
+			w.isIdle.Store(false)
+
 			var msg models.ClientRequest
 			err := json.Unmarshal([]byte(delivery.Body), &msg)
 			if err != nil {
@@ -252,9 +299,11 @@ func (w *Worker) SaveMetrics() error {
 	allMetrics := struct {
 		Metrics          *stats.Metrics
 		ProcessedPackets int
+		TotalTimer       time.Duration
 	}{
 		Metrics:          stats.ComputeLatenciesMetrics(w.latencies),
 		ProcessedPackets: w.processedPackets,
+		TotalTimer:       time.Duration(w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime).Seconds()),
 	}
 
 	encoder := json.NewEncoder(file)
@@ -268,9 +317,16 @@ func (w *Worker) SaveMetrics() error {
 }
 
 func (w *Worker) Stop() {
-	log.Printf("Stopping worker %s...\n", w.name)
+	if w.hasFinished.Load() {
+		return
+	}
 
-	w.stopConsume <- true
+	log.Printf("Stopping worker [%s]...\n", w.name)
+
+	// if worker isIdle it cannot consuming from the channel, otherwise would block
+	if !w.isIdle.Load() {
+		w.stopConsume <- true
+	}
 
 	if w.channel != nil {
 		if err := w.channel.Close(); err != nil {
@@ -293,4 +349,7 @@ func (w *Worker) Stop() {
 	if err := w.SaveMetrics(); err != nil {
 		log.Printf("could not write metrics. Error: %v\n", err)
 	}
+
+	w.hasFinished.Store(true)
+	log.Print("Worker has finished\n")
 }

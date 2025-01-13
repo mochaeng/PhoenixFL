@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mochaeng/phoenix-detector/internal/config"
@@ -17,17 +18,17 @@ const (
 )
 
 type Client struct {
-	amqpURL       string
-	messages      []*models.ClientRequest
-	currentPacket uint64
-	acked         uint64
-	nacked        uint64
-	messageNumber uint64
-	hasStopped    bool
-
+	amqpURL              string
+	messages             []*models.ClientRequest
+	currentPacket        uint64
+	acked                uint64
+	nacked               uint64
+	hasFinished          atomic.Bool
 	outstandingMsgsLimit int
 	outstandingConfirms  map[uint64]*models.ClientRequest
 	nackMsgs             *ConcurrentQueue[*models.ClientRequest]
+	hasMessageLimit      bool
+	messagesCountLimit   uint64
 
 	conn    *amqp.Connection
 	channel *amqp.Channel
@@ -35,14 +36,18 @@ type Client struct {
 	sync.RWMutex
 }
 
-func NewClient(url string, messages []*models.ClientRequest) *Client {
-	size := 100
+// Use [messageLimitCount] == 0 if you don't want any limit,
+// otherwise pass a value greather than 0
+func NewClient(amqpURL string, messages []*models.ClientRequest, messageLimitCount uint64) *Client {
+	outStandingLimit := 100
 	return &Client{
-		amqpURL:              url,
+		amqpURL:              amqpURL,
 		messages:             messages,
-		outstandingMsgsLimit: size,
+		outstandingMsgsLimit: outStandingLimit,
 		outstandingConfirms:  make(map[uint64]*models.ClientRequest),
 		nackMsgs:             NewConcurrentQueue[*models.ClientRequest](),
+		hasMessageLimit:      messageLimitCount != 0,
+		messagesCountLimit:   messageLimitCount,
 	}
 }
 
@@ -103,7 +108,7 @@ func (c *Client) StartPublishing() {
 
 	for {
 		c.RLock()
-		if c.hasStopped {
+		if c.hasFinished.Load() {
 			c.RUnlock()
 			return
 		}
@@ -122,7 +127,7 @@ func (c *Client) publishRequestPacket() error {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.hasStopped {
+	if c.hasFinished.Load() {
 		return nil
 	}
 
@@ -161,7 +166,7 @@ func (c *Client) publishRequestPacket() error {
 func (c *Client) handleNotAcknowledgedMsgs() {
 	for {
 		c.RLock()
-		if c.hasStopped {
+		if c.hasFinished.Load() {
 			c.RUnlock()
 			return
 		}
@@ -171,7 +176,7 @@ func (c *Client) handleNotAcknowledgedMsgs() {
 		for {
 			msg, ok := c.nackMsgs.Dequeue()
 			if !ok {
-
+				break
 			}
 			c.retryMessage(msg)
 		}
@@ -185,6 +190,9 @@ func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
 			c.Lock()
 			c.acked++
 			delete(c.outstandingConfirms, confirmation.DeliveryTag)
+			if c.hasMessageLimit && c.acked >= c.messagesCountLimit {
+				c.hasFinished.Store(true)
+			}
 			c.Unlock()
 		} else {
 			log.Printf(
@@ -209,7 +217,7 @@ func (c *Client) retryMessage(originalMsg *models.ClientRequest) error {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.hasStopped {
+	if c.hasFinished.Load() {
 		return nil
 	}
 
@@ -244,17 +252,17 @@ func (c *Client) Stop() {
 	c.Lock()
 	defer c.Unlock()
 
-	c.hasStopped = true
+	c.hasFinished.Store(true)
 
-	log.Printf("Number of acked packets: %d\n", c.acked)
+	log.Printf("number of acked packets: %d\n", c.acked)
 
 	if c.channel != nil {
-		log.Println("Closing channel from client")
+		log.Println("closing channel from client")
 		_ = c.channel.Close()
 	}
 
 	if c.conn != nil {
-		log.Println("Closing connection from client")
+		log.Println("closing connection from client")
 		_ = c.conn.Close()
 	}
 }
