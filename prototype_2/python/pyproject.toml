@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "prototype-2"
+version = "0.1.0"
+description = ""
+authors = []
+readme = "README.md"
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pika = "^1.3.2"
+scikit-learn = "^1.5.1"
+torch = "^2.4.0"
+joblib = "^1.4.2"
+pandas = "^2.2.3"
+ruff = "^0.8.1"
+
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+
+# ruff check . --fix
+[tool.ruff]
+exclude = [".venv", ".git"]
+lint.select = ["I"]
+lint.ignore = ["F401"]
+line-length = 88
+indent-width = 4
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
