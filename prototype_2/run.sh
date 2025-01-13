@@ -10,15 +10,15 @@ export LD_PRELOAD="/usr/local/cuda-12.4/lib64/libcudart.so /usr/local/libtorch/l
 
 rm -f data/workers/worker*
 
-echo "Starting prototype 02 script..."
+echo "Starting prototype 02 simulation..."
 cd golang/cmd
-go build *.go
-./main &
+go build -o prot2-simu *.go
+./prot2-simu -workers=1 -ispub=true &
 mb_pid=$!
 cd ../..
 
 # preparation time
-sleep 10
+sleep 5
 
 # start client packets sending for T seconds
 kill -SIGUSR1 ${mb_pid}

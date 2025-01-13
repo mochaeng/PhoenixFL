@@ -111,14 +111,14 @@ func (c *Client) StartPublishing() {
 
 		select {
 		case <-ticker.C:
-			if err := c.publishMessage(); err != nil {
+			if err := c.publishRequestPacket(); err != nil {
 				log.Printf("could not publish message. Error: %v\n", err)
 			}
 		}
 	}
 }
 
-func (c *Client) publishMessage() error {
+func (c *Client) publishRequestPacket() error {
 	c.Lock()
 	defer c.Unlock()
 

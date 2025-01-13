@@ -24,14 +24,14 @@ func main() {
 
 	workers := make([]*mb.Worker, 0, *numWorkers)
 	for i := 0; i < *numWorkers; i++ {
-		worker := mb.NewWorker(config.AmqpURL, *modelPath)
+		worker := mb.NewWorker(config.AmqpURL, *modelPath, "../../data/workers")
 		if err := worker.Connect(); err != nil {
 			log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
 		}
 		if err := worker.SetupWorker(); err != nil {
 			log.Panicf("could not setup rabbitMQ. Error: %v\n", err)
 		}
-		go worker.ConsumeRequestsRequeue()
+		go worker.ConsumeRequestsQueue()
 		workers = append(workers, worker)
 	}
 
