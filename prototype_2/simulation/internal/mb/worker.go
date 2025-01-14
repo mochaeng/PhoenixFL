@@ -26,7 +26,7 @@ type WorkerTimeMetrics struct {
 }
 
 type Worker struct {
-	name             string
+	Name             string
 	amqpURL          string
 	latencies        []float64
 	processedPackets int
@@ -53,7 +53,7 @@ func NewWorker(amqpURL, modelFile, statsPath string, idleTimeout *time.Duration)
 		log.Panicf("could not load pytorch model. Error: %v\n", err)
 	}
 	return &Worker{
-		name:        fmt.Sprintf("worker-%s", uuid.NewString()),
+		Name:        fmt.Sprintf("worker-%s", uuid.NewString()),
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
 		classifier:  classifier,
@@ -98,7 +98,7 @@ func (w *Worker) ConsumeRequestsQueue() {
 			return nil
 		}():
 			if !w.isIdle.Load() {
-				log.Printf("worker [%s] has been idle for [%v], processed [%d] packets\n", w.name, w.idleTimeout, w.processedPackets)
+				log.Printf("worker [%s] has been idle for [%v], processed [%d] packets\n", w.Name, w.idleTimeout, w.processedPackets)
 				w.putWorkerInIdleMode()
 				return
 			}
@@ -140,7 +140,7 @@ func (w *Worker) ConsumeRequestsQueue() {
 				Metadata:           msg.Metadata,
 				ClassificationTime: classificationLatency,
 				Latency:            latency,
-				WorkerName:         w.name,
+				WorkerName:         w.Name,
 				IsMalicious:        isMalicious,
 				Timestamp:          time.Now(),
 			}
@@ -168,7 +168,7 @@ func (w *Worker) Stop() {
 	w.timeMetrics.EndTime = time.Now()
 	w.timeMetrics.TotalProcessingTime = w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime)
 
-	log.Printf("Stopping worker [%s]...\n", w.name)
+	log.Printf("Stopping worker [%s]...\n", w.Name)
 
 	// if worker isIdle it cannot consuming from the channel, otherwise would block
 	if !w.isIdle.Load() {
@@ -212,7 +212,7 @@ func (w *Worker) SetupWorker() error {
 	}
 	w.confirmations = confirmations
 
-	err = SetQoS(w.channel, 1)
+	err = SetQoS(w.channel, 10)
 	if err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func (w *Worker) publishAlert(alertMsg *models.ClassifiedPacket) error {
 }
 
 func (w *Worker) saveLatencyStats() error {
-	fileName := fmt.Sprintf("worker_%s_latencies.csv", w.name)
+	fileName := fmt.Sprintf("worker_%s_latencies.csv", w.Name)
 	filePath := filepath.Join(w.statsPath, fileName)
 
 	writer, file, err := parser.CreateCSVWriter(filePath)
@@ -321,7 +321,7 @@ func (w *Worker) saveLatencyStats() error {
 }
 
 func (w *Worker) saveMetrics() error {
-	fileName := fmt.Sprintf("worker_%s_metrics.json", w.name)
+	fileName := fmt.Sprintf("worker_%s_metrics.json", w.Name)
 	filePath := filepath.Join(w.statsPath, fileName)
 
 	file, err := os.Create(filePath)

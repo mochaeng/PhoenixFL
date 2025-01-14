@@ -4,8 +4,6 @@ const (
 	AmqpURL   = "amqp://guest:guest@localhost:5672/"
 	ModelPath = "../../data/fedmedian_model.pt"
 
-	PrefetchCount = 1
-
 	PacketExchangeName = "packet"
 	PacketExchangeType = "direct"
 

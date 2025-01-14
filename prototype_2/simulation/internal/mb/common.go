@@ -3,6 +3,7 @@ package mb
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/mochaeng/phoenix-detector/internal/config"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -12,8 +13,8 @@ func SetQoS(channel *amqp.Channel, prefetchCount int) error {
 	if channel == nil {
 		return ErrInvalidChannel
 	}
-	log.Printf("Setting QoS with prefetch count %d\n", config.PrefetchCount)
-	err := channel.Qos(config.PrefetchCount, 0, false)
+	log.Printf("Setting QoS with prefetch count %d\n", prefetchCount)
+	err := channel.Qos(prefetchCount, 0, false)
 	if err != nil {
 		return fmt.Errorf("could not set QoS. Error: %v\n", err)
 	}
@@ -129,4 +130,23 @@ func SetupPublisherConfirms(channel *amqp.Channel, chanSize int) (<-chan amqp.Co
 	}
 	confirmations := channel.NotifyPublish(make(chan amqp.Confirmation, chanSize))
 	return confirmations, nil
+}
+
+func WaitForPublishConfirmation(confirmations <-chan amqp.Confirmation, sequenceNumber uint64, timeout time.Duration) error {
+	select {
+	case confirmed := <-confirmations:
+		if !confirmed.Ack {
+			return ErrNackedMessage
+		}
+		if confirmed.DeliveryTag != sequenceNumber {
+			return fmt.Errorf(
+				"expected delivery tag [%d], have [%d]\n",
+				sequenceNumber,
+				confirmed.DeliveryTag,
+			)
+		}
+		return nil
+	case <-time.After(timeout):
+		return ErrPublishConfirmTimeout
+	}
 }

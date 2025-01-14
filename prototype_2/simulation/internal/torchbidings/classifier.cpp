@@ -63,7 +63,7 @@ Model::Model(const std::string &modelFile) {
   }
 
   try {
-    this->loadScalerOnce("../../data/scaler.json");
+    this->loadScalerOnce("../../../data/scaler.json");
   } catch (const std::exception &e) {
     std::cerr << "Error loading scaler: " << e.what() << std::endl;
     throw;

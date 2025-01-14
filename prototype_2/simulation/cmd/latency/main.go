@@ -15,11 +15,31 @@ import (
 
 func main() {
 	numWorkers := flag.Int("workers", 1, "Number of workers consuming")
-	isPublishing := flag.Bool("ispub", true, "If you want a to publish packets to the [requests_queue]")
-	modelPath := flag.String("model", "../../../data/fedmedian_model.pt", "Path to the PyTorch model")
-	csvPath := flag.String("csv", "../../../data/10_000-raw-packets.csv", "Path to a csv file containing the packets")
-	publishInterval := flag.Duration("pub-interval", 5*time.Millisecond, "Interval time in wich the client will publish a packet into [requests_queue]")
-	messageLimit := flag.Uint64("msg-limit", 0, "The amount of fixed messages you want to be published. If the value is 0 not limit would be set")
+	isPublishing := flag.Bool(
+		"ispub",
+		true,
+		"If you want a to publish packets to the [requests_queue]",
+	)
+	modelPath := flag.String(
+		"model",
+		"../../../data/fedmedian_model.pt",
+		"Path to the PyTorch model",
+	)
+	csvPath := flag.String(
+		"csv",
+		"../../../data/10_000-raw-packets.csv",
+		"Path to a csv file containing the packets",
+	)
+	publishInterval := flag.Duration(
+		"pub-interval",
+		5*time.Millisecond,
+		"Interval time for the client publish a packet into [requests_queue]",
+	)
+	messageLimit := flag.Uint64(
+		"msg-limit",
+		0,
+		"The amount of fixed messages you want to be published. If the value is 0 no limit would be set",
+	)
 	flag.Parse()
 
 	sigChan := make(chan os.Signal, 1)
@@ -27,27 +47,17 @@ func main() {
 
 	workers := make([]*mb.Worker, 0, *numWorkers)
 	for i := 0; i < *numWorkers; i++ {
-		worker := mb.NewWorker(config.AmqpURL, *modelPath, "../../data/workers")
+		worker := mb.NewWorker(config.AmqpURL, *modelPath, "../../../data/workers", nil)
 		if err := worker.Connect(); err != nil {
 			log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
 		}
 		if err := worker.SetupWorker(); err != nil {
-			log.Panicf("could not setup rabbitMQ. Error: %v\n", err)
+			log.Panicf("could not setup worker. Error: %v\n", err)
 		}
 		go worker.ConsumeRequestsQueue()
 		workers = append(workers, worker)
 	}
 
-	// columnsToRemove := []string{
-	// 	"IPV4_SRC_ADDR",
-	// 	"IPV4_DST_ADDR",
-	// 	"L4_SRC_PORT",
-	// 	"L4_DST_PORT",
-	// }
-	// messages, err := parser.ParsePacketsCSV(*csvPath, columnsToRemove)
-	// if err != nil {
-	// 	log.Panicf("failed to parse csv packets. Error: %v\n", err)
-	// }
 	messages, err := parser.GetMessages(*csvPath)
 	if err != nil {
 		log.Panicf("failed to get messages. Error: %v\n", err)
