@@ -83,7 +83,7 @@ func (w *Worker) Connect() error {
 
 func (w *Worker) SetupWorker() error {
 	if w.channel == nil {
-		return config.ErrInvalidChannel
+		return ErrInvalidChannel
 	}
 
 	confirmations, err := SetupPublisherConfirms(w.channel, 100)
@@ -214,6 +214,9 @@ func (w *Worker) ConsumeRequestsQueue() {
 				delivery.Nack(false, true)
 				continue
 			}
+
+			// [TODO] implement sequenceNumber check on the worker
+			// just as the client
 
 			_, err = w.channel.PublishWithDeferredConfirm(
 				config.PacketExchangeName,

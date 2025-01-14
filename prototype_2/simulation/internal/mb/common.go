@@ -10,7 +10,7 @@ import (
 
 func SetQoS(channel *amqp.Channel, prefetchCount int) error {
 	if channel == nil {
-		return config.ErrInvalidChannel
+		return ErrInvalidChannel
 	}
 	log.Printf("Setting QoS with prefetch count %d\n", config.PrefetchCount)
 	err := channel.Qos(config.PrefetchCount, 0, false)
@@ -22,7 +22,7 @@ func SetQoS(channel *amqp.Channel, prefetchCount int) error {
 
 func PacketExchangeDeclare(channel *amqp.Channel) error {
 	if channel == nil {
-		return config.ErrInvalidChannel
+		return ErrInvalidChannel
 	}
 	log.Println("Declaring exchange [packet]")
 	err := channel.ExchangeDeclare(
@@ -42,7 +42,7 @@ func PacketExchangeDeclare(channel *amqp.Channel) error {
 
 func GetRequestsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	if channel == nil {
-		return nil, config.ErrInvalidChannel
+		return nil, ErrInvalidChannel
 	}
 	log.Println("Declaring queue [requests_queue]")
 	queue, err := channel.QueueDeclare(
@@ -61,7 +61,7 @@ func GetRequestsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 
 func GetAlertsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	if channel == nil {
-		return nil, config.ErrInvalidChannel
+		return nil, ErrInvalidChannel
 	}
 	log.Println("Declaring [alerts_queue] queue")
 	queue, err := channel.QueueDeclare(
@@ -80,7 +80,7 @@ func GetAlertsQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 
 func bindQueueWithExchange(channel *amqp.Channel, queueName, routingKey, exchangeName string) error {
 	if channel == nil {
-		return config.ErrInvalidChannel
+		return ErrInvalidChannel
 	}
 	log.Printf("Binding queue %s to exchange %s with routing key %s\n", queueName, exchangeName, routingKey)
 	err := channel.QueueBind(

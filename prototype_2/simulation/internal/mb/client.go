@@ -13,10 +13,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const (
-	publishInterval = 5 * time.Millisecond
-)
-
 type Client struct {
 	amqpURL              string
 	messages             []*models.ClientRequest
@@ -29,16 +25,18 @@ type Client struct {
 	nackMsgs             *ConcurrentQueue[*models.ClientRequest]
 	hasMessageLimit      bool
 	messagesCountLimit   uint64
+	publishInterval      time.Duration
 
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	conn          *amqp.Connection
+	channel       *amqp.Channel
+	confirmations <-chan amqp.Confirmation
 
 	sync.RWMutex
 }
 
 // Use [messageLimitCount] == 0 if you don't want any limit,
 // otherwise pass a value greather than 0
-func NewClient(amqpURL string, messages []*models.ClientRequest, messageLimitCount uint64) *Client {
+func NewClient(amqpURL string, messages []*models.ClientRequest, messageLimitCount uint64, publishInterval time.Duration) *Client {
 	outStandingLimit := 100
 	return &Client{
 		amqpURL:              amqpURL,
@@ -48,6 +46,7 @@ func NewClient(amqpURL string, messages []*models.ClientRequest, messageLimitCou
 		nackMsgs:             NewConcurrentQueue[*models.ClientRequest](),
 		hasMessageLimit:      messageLimitCount != 0,
 		messagesCountLimit:   messageLimitCount,
+		publishInterval:      publishInterval,
 	}
 }
 
@@ -69,7 +68,13 @@ func (c *Client) Connect() error {
 }
 
 func (c *Client) SetupClient() error {
-	err := SetQoS(c.channel, 1)
+	confirmations, err := SetupPublisherConfirms(c.channel, c.outstandingMsgsLimit)
+	if err != nil {
+		return err
+	}
+	c.confirmations = confirmations
+
+	err = SetQoS(c.channel, 1)
 	if err != nil {
 		return err
 	}
@@ -89,13 +94,8 @@ func (c *Client) SetupClient() error {
 		return err
 	}
 
-	confirmations, err := SetupPublisherConfirms(c.channel, c.outstandingMsgsLimit)
-	if err != nil {
-		return err
-	}
-
-	go c.handleAcknowledgments(confirmations)
-	go c.handleNotAcknowledgedMsgs()
+	// go c.handleAcknowledgments(confirmations)
+	// go c.handleNotAcknowledgedMsgs()
 
 	return nil
 }
@@ -103,7 +103,7 @@ func (c *Client) SetupClient() error {
 func (c *Client) StartPublishing() {
 	log.Println("Starting publishing messages")
 
-	ticker := time.NewTicker(publishInterval)
+	ticker := time.NewTicker(c.publishInterval)
 	defer ticker.Stop()
 
 	for {
@@ -116,14 +116,16 @@ func (c *Client) StartPublishing() {
 
 		select {
 		case <-ticker.C:
-			if err := c.publishRequestPacket(); err != nil {
+			if err := c.PublishRequestPacket(); err != nil {
 				log.Printf("could not publish message. Error: %v\n", err)
+				c.Stop()
+				return
 			}
 		}
 	}
 }
 
-func (c *Client) publishRequestPacket() error {
+func (c *Client) PublishRequestPacket() error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -146,7 +148,7 @@ func (c *Client) publishRequestPacket() error {
 	sequenceNumber := c.channel.GetNextPublishSeqNo()
 	c.outstandingConfirms[sequenceNumber] = originalMessage
 
-	err = c.channel.Publish(
+	_, err = c.channel.PublishWithDeferredConfirm(
 		config.PacketExchangeName,
 		config.RequestsQueueRoutingKey,
 		false, // mandatory
@@ -160,97 +162,119 @@ func (c *Client) publishRequestPacket() error {
 		return fmt.Errorf("failed to publish message: %w\n", err)
 	}
 
-	return nil
-}
-
-func (c *Client) handleNotAcknowledgedMsgs() {
-	for {
-		c.RLock()
-		if c.hasFinished.Load() {
-			c.RUnlock()
-			return
+	select {
+	case confirmed := <-c.confirmations:
+		if !confirmed.Ack {
+			return ErrNackedMessage
 		}
-		c.RUnlock()
-
-		c.nackMsgs.WaitForItem()
-		for {
-			msg, ok := c.nackMsgs.Dequeue()
-			if !ok {
-				break
-			}
-			c.retryMessage(msg)
+		if confirmed.DeliveryTag != sequenceNumber {
+			return fmt.Errorf("invalid message ackowledged\n")
 		}
-	}
-}
-
-func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
-	for confirmation := range confirmations {
-		if confirmation.Ack {
-			// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
-			c.Lock()
-			c.acked++
-			delete(c.outstandingConfirms, confirmation.DeliveryTag)
-			if c.hasMessageLimit && c.acked >= c.messagesCountLimit {
-				c.hasFinished.Store(true)
-			}
-			c.Unlock()
-		} else {
-			log.Printf(
-				"Message with delivery tag [%d] not acknowledged. Retrying...\n",
-				confirmation.DeliveryTag,
-			)
-			c.Lock()
-			item, exists := c.outstandingConfirms[confirmation.DeliveryTag]
-			if !exists || item == nil {
-				log.Printf("no corresponding outstanding message for delivery tag [%d]", confirmation.DeliveryTag)
-				c.Unlock()
-				continue
-			}
-			c.nacked++
-			c.nackMsgs.Enqueue(item)
-			c.Unlock()
-		}
-	}
-}
-
-func (c *Client) retryMessage(originalMsg *models.ClientRequest) error {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.hasFinished.Load() {
-		return nil
+	case <-time.After(5 * time.Second):
+		return ErrPublishConfirmTimeout
 	}
 
-	message := &models.ClientRequest{
-		Timestamp: float64(time.Now().Unix()),
-		Metadata:  originalMsg.Metadata,
-		Packet:    originalMsg.Packet,
-	}
-	messageJSON, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message for retry: %w\n", err)
-	}
-
-	err = c.channel.Publish(
-		config.PacketExchangeName,
-		config.RequestsQueueRoutingKey,
-		false, // mandatory
-		false, // immediate
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        messageJSON,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to publish message during retry. Error: %w\n", err)
+	c.acked++
+	if c.hasMessageLimit && c.acked >= c.messagesCountLimit {
+		c.hasFinished.Store(true)
 	}
 
 	return nil
 }
+
+// func (c *Client) handleNotAcknowledgedMsgs() {
+// 	for {
+// 		c.RLock()
+// 		if c.hasFinished.Load() {
+// 			c.RUnlock()
+// 			return
+// 		}
+// 		c.RUnlock()
+
+// 		c.nackMsgs.WaitForItem()
+// 		for {
+// 			msg, ok := c.nackMsgs.Dequeue()
+// 			if !ok {
+// 				break
+// 			}
+// 			c.retryMessage(msg)
+// 		}
+// 	}
+// }
+
+// func (c *Client) handleAcknowledgments(confirmations <-chan amqp.Confirmation) {
+// 	for confirmation := range confirmations {
+// 		if confirmation.Ack {
+// 			// log.Printf("Message with delivery tag %d acknowledged\n", confirmation.DeliveryTag)
+// 			c.Lock()
+// 			c.acked++
+// 			delete(c.outstandingConfirms, confirmation.DeliveryTag)
+// 			if c.hasMessageLimit && c.acked >= c.messagesCountLimit {
+// 				c.hasFinished.Store(true)
+// 				c.Stop()
+// 			}
+// 			c.Unlock()
+// 		} else {
+// 			log.Printf(
+// 				"Message with delivery tag [%d] not acknowledged. Retrying...\n",
+// 				confirmation.DeliveryTag,
+// 			)
+// 			c.Lock()
+// 			item, exists := c.outstandingConfirms[confirmation.DeliveryTag]
+// 			if !exists || item == nil {
+// 				log.Printf("no corresponding outstanding message for delivery tag [%d]", confirmation.DeliveryTag)
+// 				c.Unlock()
+// 				continue
+// 			}
+// 			c.nacked++
+// 			c.nackMsgs.Enqueue(item)
+// 			c.Unlock()
+// 		}
+// 	}
+// }
+
+// func (c *Client) retryMessage(originalMsg *models.ClientRequest) error {
+// 	c.Lock()
+// 	defer c.Unlock()
+
+// 	if c.hasFinished.Load() {
+// 		return nil
+// 	}
+
+// 	message := &models.ClientRequest{
+// 		Timestamp: float64(time.Now().Unix()),
+// 		Metadata:  originalMsg.Metadata,
+// 		Packet:    originalMsg.Packet,
+// 	}
+// 	messageJSON, err := json.Marshal(message)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal message for retry: %w\n", err)
+// 	}
+
+// 	err = c.channel.Publish(
+// 		config.PacketExchangeName,
+// 		config.RequestsQueueRoutingKey,
+// 		false, // mandatory
+// 		false, // immediate
+// 		amqp.Publishing{
+// 			ContentType: "application/json",
+// 			Body:        messageJSON,
+// 		},
+// 	)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to publish message during retry. Error: %w\n", err)
+// 	}
+
+// 	return nil
+// }
 
 func (c *Client) Stop() {
 	c.Lock()
 	defer c.Unlock()
+
+	if c.hasFinished.Load() {
+		return
+	}
 
 	c.hasFinished.Store(true)
 
