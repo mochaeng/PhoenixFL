@@ -35,8 +35,9 @@ type Worker struct {
 	statsPath        string
 	timeMetrics      *WorkerTimeMetrics
 	isIdle           atomic.Bool
-	idleTimeout      time.Duration
+	idleTimeout      *time.Duration
 	hasFinished      atomic.Bool
+	acked            uint64
 
 	conn          *amqp.Connection
 	channel       *amqp.Channel
@@ -46,23 +47,20 @@ type Worker struct {
 	confirmations <-chan amqp.Confirmation
 }
 
-func NewWorker(amqpURL, modelFile, statsPath string) *Worker {
+func NewWorker(amqpURL, modelFile, statsPath string, idleTimeout *time.Duration) *Worker {
 	classifier, err := torchbidings.NewModel(modelFile)
 	if err != nil {
 		log.Panicf("could not load pytorch model. Error: %v\n", err)
 	}
-	w := &Worker{
+	return &Worker{
 		name:        fmt.Sprintf("worker-%s", uuid.NewString()),
 		stopConsume: make(chan bool),
 		amqpURL:     amqpURL,
 		classifier:  classifier,
 		statsPath:   statsPath,
 		timeMetrics: &WorkerTimeMetrics{},
-		idleTimeout: 1 * time.Second,
+		idleTimeout: idleTimeout,
 	}
-	w.isIdle.Store(false)
-	w.hasFinished.Store(false)
-	return w
 }
 
 func (w *Worker) Connect() error {
@@ -79,6 +77,128 @@ func (w *Worker) Connect() error {
 	w.channel = channel
 
 	return nil
+}
+
+func (w *Worker) ConsumeRequestsQueue() {
+	w.timeMetrics.StartTime = time.Now()
+
+	var idleTimer *time.Timer
+	if w.idleTimeout != nil {
+		idleTimer = time.NewTimer(*w.idleTimeout)
+	}
+
+	for {
+		select {
+		case <-w.stopConsume:
+			return
+		case <-func() <-chan time.Time {
+			if idleTimer != nil {
+				return idleTimer.C
+			}
+			return nil
+		}():
+			if !w.isIdle.Load() {
+				log.Printf("worker [%s] has been idle for [%v], processed [%d] packets\n", w.name, w.idleTimeout, w.processedPackets)
+				w.putWorkerInIdleMode()
+				return
+			}
+			idleTimer.Reset(*w.idleTimeout)
+		case delivery, ok := <-w.requestsMsgs:
+			if !ok {
+				continue
+			}
+			if w.hasFinished.Load() {
+				return
+			}
+
+			if idleTimer != nil {
+				w.resetIdlerTimer(idleTimer)
+			}
+
+			var msg models.ClientRequest
+			err := json.Unmarshal([]byte(delivery.Body), &msg)
+			if err != nil {
+				log.Printf("error parsing [ClientRequest] message. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+			convertedSentTimestamp := time.Unix(int64(msg.Timestamp), 0)
+			transmissionAndQueueLatency := time.Now().Sub(convertedSentTimestamp)
+
+			classificationStartTime := time.Now()
+			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
+			if err != nil {
+				log.Printf("prediction failed. Error: %v\n", err)
+				delivery.Nack(false, true)
+				continue
+			}
+			classificationLatency := time.Now().Sub(classificationStartTime)
+
+			latency := transmissionAndQueueLatency + classificationLatency
+			publishAlertStartTime := time.Now()
+			alertMsg := models.ClassifiedPacket{
+				Metadata:           msg.Metadata,
+				ClassificationTime: classificationLatency,
+				Latency:            latency,
+				WorkerName:         w.name,
+				IsMalicious:        isMalicious,
+				Timestamp:          time.Now(),
+			}
+			if err := w.publishAlert(&alertMsg); err != nil {
+				log.Println(err)
+				delivery.Nack(false, true)
+				continue
+			}
+			publishAlertLatency := time.Now().Sub(publishAlertStartTime)
+
+			inducedLatency := latency + publishAlertLatency
+			w.latencies = append(w.latencies, float64(inducedLatency.Seconds()))
+			w.processedPackets++
+
+			delivery.Ack(false)
+		}
+	}
+}
+
+func (w *Worker) Stop() {
+	if w.hasFinished.Load() {
+		return
+	}
+
+	w.timeMetrics.EndTime = time.Now()
+	w.timeMetrics.TotalProcessingTime = w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime)
+
+	log.Printf("Stopping worker [%s]...\n", w.name)
+
+	// if worker isIdle it cannot consuming from the channel, otherwise would block
+	if !w.isIdle.Load() {
+		w.stopConsume <- true
+	}
+
+	if w.channel != nil {
+		if err := w.channel.Close(); err != nil {
+			log.Printf("could not close channel. Error: %v\n", err)
+		}
+	}
+
+	if w.conn != nil {
+		if err := w.conn.Close(); err != nil {
+			log.Printf("could not close connection. Error: %v\n", err)
+		}
+	}
+
+	w.classifier.Delete()
+
+	if err := w.saveLatencyStats(); err != nil {
+		log.Printf("could not write latencies. Error: %v\n", err)
+	}
+
+	if err := w.saveMetrics(); err != nil {
+		log.Printf("could not write metrics. Error: %v\n", err)
+	}
+
+	w.hasFinished.Store(true)
+	log.Print("Worker has finished\n")
 }
 
 func (w *Worker) SetupWorker() error {
@@ -141,123 +261,34 @@ func (w *Worker) SetupWorker() error {
 	return nil
 }
 
-func (w *Worker) ConsumeRequestsQueue() {
-	w.timeMetrics.StartTime = time.Now()
-	idleTimer := time.NewTimer(w.idleTimeout)
-
-	for {
-		select {
-		case <-w.stopConsume:
-			return
-		case <-idleTimer.C:
-			if !w.isIdle.Load() {
-				log.Printf("worker [%s] has been idle for [%v], processed [%d] packets\n", w.name, w.idleTimeout, w.processedPackets)
-
-				w.isIdle.Store(true)
-				w.timeMetrics.EndTime = time.Now()
-				w.timeMetrics.TotalProcessingTime = w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime)
-				w.Stop()
-
-				return
-			}
-			idleTimer.Reset(w.idleTimeout)
-		case delivery, ok := <-w.requestsMsgs:
-			if !ok {
-				continue
-			}
-			if w.hasFinished.Load() {
-				return
-			}
-
-			if !idleTimer.Stop() {
-				select {
-				case <-idleTimer.C:
-				default:
-				}
-			}
-			idleTimer.Reset(w.idleTimeout)
-			w.isIdle.Store(false)
-
-			var msg models.ClientRequest
-			err := json.Unmarshal([]byte(delivery.Body), &msg)
-			if err != nil {
-				log.Printf("error parsing [ClientRequest] message. Error: %v\n", err)
-				delivery.Nack(false, true)
-				continue
-			}
-
-			convertedSentTimestamp := time.Unix(int64(msg.Timestamp), 0)
-			transmissionAndQueueLatency := time.Now().Sub(convertedSentTimestamp)
-
-			classificationStartTime := time.Now()
-			isMalicious, err := w.classifier.PredictIsPositiveBinary(msg.Packet)
-			if err != nil {
-				log.Printf("prediction failed. Error: %v\n", err)
-				delivery.Nack(false, true)
-				continue
-			}
-			classificationLatency := time.Now().Sub(classificationStartTime)
-
-			latency := transmissionAndQueueLatency + classificationLatency
-			publishAlertStartTime := time.Now()
-			classifiedPacket := models.ClassifiedPacket{
-				Metadata:           msg.Metadata,
-				ClassificationTime: classificationLatency,
-				Latency:            latency,
-				WorkerName:         w.name,
-				IsMalicious:        isMalicious,
-				Timestamp:          time.Now(),
-			}
-			classificationMessage, err := json.Marshal(classifiedPacket)
-			if err != nil {
-				log.Printf("failed to marshal classification message. Error: %v\n", err)
-				delivery.Nack(false, true)
-				continue
-			}
-
-			// [TODO] implement sequenceNumber check on the worker
-			// just as the client
-
-			_, err = w.channel.PublishWithDeferredConfirm(
-				config.PacketExchangeName,
-				config.AlertsQueueRoutingKey,
-				false, // mandatory
-				false, // immediate
-				amqp.Publishing{
-					ContentType: "application/json",
-					Body:        classificationMessage,
-				},
-			)
-			if err != nil {
-				log.Printf("failed to publish message: %v\n", err)
-				delivery.Nack(false, true)
-				continue
-			}
-
-			select {
-			case confirmed := <-w.confirmations:
-				if !confirmed.Ack {
-					log.Print("message was not acknowledged by rabbitMQ\n")
-					delivery.Nack(false, true)
-					continue
-				}
-			case <-time.After(5 * time.Second):
-				log.Print("timeout waiting for message confirmation\n")
-				delivery.Nack(false, true)
-				continue
-			}
-
-			publishAlertLatency := time.Now().Sub(publishAlertStartTime)
-			inducedLatency := latency + publishAlertLatency
-			w.latencies = append(w.latencies, float64(inducedLatency.Seconds()))
-			w.processedPackets++
-
-			delivery.Ack(false)
-		}
+func (w *Worker) publishAlert(alertMsg *models.ClassifiedPacket) error {
+	classificationMessage, err := json.Marshal(alertMsg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal classification message. Error: %v\n", err)
 	}
+
+	sequenceNumber := w.channel.GetNextPublishSeqNo()
+
+	_, err = w.channel.PublishWithDeferredConfirm(
+		config.PacketExchangeName,
+		config.AlertsQueueRoutingKey,
+		false, // mandatory
+		false, // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        classificationMessage,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to publish message. Error: %v\n", err)
+	}
+
+	WaitForPublishConfirmation(w.confirmations, sequenceNumber, 5*time.Second)
+
+	return nil
 }
 
-func (w *Worker) SaveLatencyStats() error {
+func (w *Worker) saveLatencyStats() error {
 	fileName := fmt.Sprintf("worker_%s_latencies.csv", w.name)
 	filePath := filepath.Join(w.statsPath, fileName)
 
@@ -289,7 +320,7 @@ func (w *Worker) SaveLatencyStats() error {
 	return nil
 }
 
-func (w *Worker) SaveMetrics() error {
+func (w *Worker) saveMetrics() error {
 	fileName := fmt.Sprintf("worker_%s_metrics.json", w.name)
 	filePath := filepath.Join(w.statsPath, fileName)
 
@@ -319,40 +350,24 @@ func (w *Worker) SaveMetrics() error {
 	return nil
 }
 
-func (w *Worker) Stop() {
-	if w.hasFinished.Load() {
+func (w *Worker) putWorkerInIdleMode() {
+	w.isIdle.Store(true)
+	// w.timeMetrics.EndTime = time.Now()
+	// w.timeMetrics.TotalProcessingTime = w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime)
+	w.Stop()
+}
+
+func (w *Worker) resetIdlerTimer(idleTimer *time.Timer) {
+	if idleTimer == nil {
 		return
 	}
 
-	log.Printf("Stopping worker [%s]...\n", w.name)
-
-	// if worker isIdle it cannot consuming from the channel, otherwise would block
-	if !w.isIdle.Load() {
-		w.stopConsume <- true
-	}
-
-	if w.channel != nil {
-		if err := w.channel.Close(); err != nil {
-			log.Printf("could not close channel. Error: %v\n", err)
+	if !idleTimer.Stop() {
+		select {
+		case <-idleTimer.C:
+		default:
 		}
 	}
-
-	if w.conn != nil {
-		if err := w.conn.Close(); err != nil {
-			log.Printf("could not close connection. Error: %v\n", err)
-		}
-	}
-
-	w.classifier.Delete()
-
-	if err := w.SaveLatencyStats(); err != nil {
-		log.Printf("could not write latencies. Error: %v\n", err)
-	}
-
-	if err := w.SaveMetrics(); err != nil {
-		log.Printf("could not write metrics. Error: %v\n", err)
-	}
-
-	w.hasFinished.Store(true)
-	log.Print("Worker has finished\n")
+	idleTimer.Reset(*w.idleTimeout)
+	w.isIdle.Store(false)
 }
