@@ -18,20 +18,27 @@ export CUDACXX := $(CUDA_PATH)/bin/nvcc
 export LD_PRELOAD := $(CUDA_LIB)/libcudart.so $(TORCH_LIB)/libtorch_cuda.so
 
 
-WORKERS ?= 5
+WORKERS ?= 3
 IS_PUB ?= true
-PUB_INTERVAL ?= 5ms
-MSG_LIMIT ?= 1000
-PREP_TIME ?= 6
-SIM_TIME ?= 60
+MSG_LIMIT ?= 100_000
 WORKER_IDLE_TIMEOUT ?= 500ms
 
-.PHONY: clean build-latency build-throughput run-latency run-throughput simulation-latency simulation-throughput
+
+PUB_INTERVAL ?= 5ms
+PREP_TIME ?= 6
+SIM_TIME ?= 60
+
+.PHONY: clean build-latency build-throughput run-latency run-throughput simulation-latency \
+		simulation-throughput clean-throughput
 
 clean:
 	rm -f data/workers/worker*
 	rm -f simulation/cmd/latency/prot2-simu
 	rm -f simulation/cmd/throughput/prot2-simu
+
+clean-throughput: clean
+	find data/workers -type f -name '*-simulation-throughput*' -regex '.*/[0-9]+-[0-9]+-simulation-throughput.*' \
+	                  -exec rm -f {} +
 
 build-latency:
 	cd simulation/cmd/latency && go build -o prot2-simu *.go

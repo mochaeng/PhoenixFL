@@ -24,18 +24,18 @@ type ClassifiedPacket struct {
 	Timestamp          time.Time       `json:"timestamp"`
 }
 
-type RecordThroughput struct {
-	ProcessedPackets uint64  `json:"processed_packets"`
-	Timer            float64 `json:"total_timer"`
+type SimulationThroughputResult struct {
+	Timers     []float64 `json:"timers"`
+	Mean       float64   `json:"mean"`
+	Median     float64   `json:"median"`
+	Quantile75 float64   `json:"quantile_75"`
+	Quantile95 float64   `json:"quantile_95"`
+	Quantile99 float64   `json:"quantile_99"`
 }
 
-type AggregatedThroughput struct {
-	TotalFiles            int
-	TotalProcessedPackets uint64
-	Timers                []float64
-	Mean                  float64
-	Median                float64
-	Quantile75            float64
-	Quantile95            float64
-	Quantile99            float64
+type WorkerThroughputRecords struct {
+	TotalFiles            int       `json:"total_files"`
+	TotalProcessedPackets uint64    `json:"processed_packets"`
+	Timers                []float64 `json:"timers"`
+	Mean                  float64   `json:"mean"`
 }
