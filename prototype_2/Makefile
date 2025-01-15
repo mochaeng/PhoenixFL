@@ -18,7 +18,7 @@ export CUDACXX := $(CUDA_PATH)/bin/nvcc
 export LD_PRELOAD := $(CUDA_LIB)/libcudart.so $(TORCH_LIB)/libtorch_cuda.so
 
 
-WORKERS ?= 3
+WORKERS ?= 1
 IS_PUB ?= true
 MSG_LIMIT ?= 100_000
 WORKER_IDLE_TIMEOUT ?= 500ms

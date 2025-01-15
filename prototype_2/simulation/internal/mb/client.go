@@ -18,7 +18,6 @@ type Client struct {
 	messages             []*models.ClientRequest
 	currentPacket        uint64
 	acked                uint64
-	nacked               uint64
 	hasFinished          atomic.Bool
 	outstandingMsgsLimit int
 	hasMessageLimit      bool

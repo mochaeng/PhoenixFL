@@ -37,12 +37,9 @@ type Worker struct {
 	isIdle           atomic.Bool
 	idleTimeout      *time.Duration
 	hasFinished      atomic.Bool
-	acked            uint64
 
 	conn          *amqp.Connection
 	channel       *amqp.Channel
-	requestsQueue *amqp.Queue
-	alertsQueue   *amqp.Queue
 	requestsMsgs  <-chan amqp.Delivery
 	confirmations <-chan amqp.Confirmation
 }
@@ -222,17 +219,15 @@ func (w *Worker) SetupWorker() error {
 		return err
 	}
 
-	requestsQueue, err := GetRequestsQueue(w.channel)
+	_, err = GetRequestsQueue(w.channel)
 	if err != nil {
 		return err
 	}
-	w.requestsQueue = requestsQueue
 
-	alertsQueue, err := GetAlertsQueue(w.channel)
+	_, err = GetAlertsQueue(w.channel)
 	if err != nil {
 		return err
 	}
-	w.alertsQueue = alertsQueue
 
 	err = BindRequestsQueueWithPacketExchange(w.channel)
 	if err != nil {
