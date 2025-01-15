@@ -331,11 +331,11 @@ func (w *Worker) saveMetrics() error {
 	defer file.Close()
 
 	allMetrics := struct {
-		Metrics          *stats.Metrics
-		ProcessedPackets int
-		TotalTimer       time.Duration
+		Metrics          *stats.Metrics `json:"metrics"`
+		ProcessedPackets int            `json:"processed_packets"`
+		TotalTimer       time.Duration  `json:"total_timer"`
 	}{
-		Metrics:          stats.ComputeLatenciesMetrics(w.latencies),
+		Metrics:          stats.ComputeMetrics(w.latencies),
 		ProcessedPackets: w.processedPackets,
 		TotalTimer:       time.Duration(w.timeMetrics.EndTime.Sub(w.timeMetrics.StartTime).Seconds()),
 	}

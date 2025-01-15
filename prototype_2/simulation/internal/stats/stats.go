@@ -6,30 +6,30 @@ import (
 )
 
 type Metrics struct {
-	Mean       float64
-	Median     float64
-	Quantile75 float64
-	Quantile95 float64
-	Quantile99 float64
-	Max        float64
-	Min        float64
+	Mean       float64 `json:"mean"`
+	Median     float64 `json:"median"`
+	Quantile75 float64 `json:"quantile_75"`
+	Quantile95 float64 `json:"quantile_95"`
+	Quantile99 float64 `json:"quantile_99"`
+	Max        float64 `json:"max"`
+	Min        float64 `json:"min"`
 }
 
-func ComputeLatenciesMetrics(latencies []float64) *Metrics {
-	if len(latencies) == 0 {
+func ComputeMetrics(data []float64) *Metrics {
+	if len(data) == 0 {
 		return &Metrics{}
 	}
 
-	sort.Float64s(latencies)
+	sort.Float64s(data)
 
 	return &Metrics{
-		Mean:       mean(latencies),
-		Median:     quantile(latencies, 0.5),
-		Quantile75: quantile(latencies, 0.75),
-		Quantile95: quantile(latencies, 0.95),
-		Quantile99: quantile(latencies, 0.99),
-		Max:        latencies[len(latencies)-1],
-		Min:        latencies[0],
+		Mean:       mean(data),
+		Median:     quantile(data, 0.5),
+		Quantile75: quantile(data, 0.75),
+		Quantile95: quantile(data, 0.95),
+		Quantile99: quantile(data, 0.99),
+		Max:        data[len(data)-1],
+		Min:        data[0],
 	}
 }
 

@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -85,7 +87,7 @@ func main() {
 		log.Printf("worker [%s] created\n", worker.Name)
 	}
 
-	time.Sleep(35 * time.Second)
+	// time.Sleep(35 * time.Second)
 
 	log.Println("Starting consuming...")
 	var wg sync.WaitGroup
@@ -100,4 +102,23 @@ func main() {
 	wg.Wait()
 
 	// aggregates metrics from current simulation number
+	dir := "../../../data/workers"
+	absPath, err := filepath.Abs(dir)
+	if err != nil {
+		log.Fatalf("could not resolve absolute path. Error: %v\n", err)
+	}
+
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		log.Fatalf("directory [%s] does not exist\n", absPath)
+	}
+
+	aggregatedThroughput, err := parser.GetAllThroughputsAggregatedRecords(absPath)
+	if err != nil {
+		log.Fatalf("failed to aggregate throughputs. Error: %v\n", err)
+	}
+
+	pathToSave := filepath.Join(dir, "simulations.json")
+	if err := parser.CreateJsonFileFromStruct(aggregatedThroughput, pathToSave); err != nil {
+		log.Fatalf("failed to create throughput's simulation file. Error: %v\n", err)
+	}
 }

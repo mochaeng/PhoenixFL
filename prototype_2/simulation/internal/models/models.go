@@ -23,3 +23,19 @@ type ClassifiedPacket struct {
 	IsMalicious        bool            `json:"is_malicious"`
 	Timestamp          time.Time       `json:"timestamp"`
 }
+
+type RecordThroughput struct {
+	ProcessedPackets uint64  `json:"processed_packets"`
+	Timer            float64 `json:"total_timer"`
+}
+
+type AggregatedThroughput struct {
+	TotalFiles            int
+	TotalProcessedPackets uint64
+	Timers                []float64
+	Mean                  float64
+	Median                float64
+	Quantile75            float64
+	Quantile95            float64
+	Quantile99            float64
+}
