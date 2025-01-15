@@ -21,7 +21,6 @@ type Client struct {
 	nacked               uint64
 	hasFinished          atomic.Bool
 	outstandingMsgsLimit int
-	nackMsgs             *ConcurrentQueue[*models.ClientRequest]
 	hasMessageLimit      bool
 	messagesCountLimit   uint64
 	publishInterval      time.Duration
@@ -41,7 +40,6 @@ func NewClient(amqpURL string, messages []*models.ClientRequest, messageLimitCou
 		amqpURL:              amqpURL,
 		messages:             messages,
 		outstandingMsgsLimit: outStandingLimit,
-		nackMsgs:             NewConcurrentQueue[*models.ClientRequest](),
 		hasMessageLimit:      messageLimitCount != 0,
 		messagesCountLimit:   messageLimitCount,
 		publishInterval:      publishInterval,
