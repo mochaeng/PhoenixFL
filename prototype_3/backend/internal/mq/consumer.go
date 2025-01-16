@@ -3,8 +3,8 @@ package mq
 import (
 	"encoding/json"
 	"log"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/mochaeng/phoenixfl/internal/algorithms"
 	"github.com/mochaeng/phoenixfl/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -84,8 +84,6 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 
 	stats := algorithms.NewPacketStats()
 	for delivery := range msgs {
-		start := time.Now()
-
 		var packet models.Packet
 		err := json.Unmarshal([]byte(delivery.Body), &packet)
 		if err != nil {
@@ -95,21 +93,19 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 		}
 
 		stats.Update(packet)
-		maliciousIPs := stats.GetTopMaliciousIps(5)
-		targetedIps := stats.GetTopTargetedIps(5)
 
-		packetResponse := models.PacketWithStatsResponse{}
-		packetResponse.Packet = &packet
-		packetResponse.Stats = models.StatsResponse{
-			TotalPackets:   stats.TotalPackets,
-			TotalMalicious: stats.TotalMalicious,
-			MaliciousIps:   maliciousIPs,
-			TargetedIps:    targetedIps,
+		packetResponse := models.PacketWithStatsResponse{
+			ID:     uuid.NewString(),
+			Packet: &packet,
+			Stats:  stats.GetStatsResponse(5),
 		}
+		// packetResponse.Stats = &models.StatsResponse{
+		// 	TotalPackets:   stats.TotalPackets,
+		// 	TotalMalicious: stats.TotalMalicious,
+		// 	MaliciousIps:   maliciousIPs,
+		// 	TargetedIps:    targetedIps,
+		// }
 
-		elapsed := time.Since(start)
-		log.Println(elapsed)
-		// log.Printf("Received a message: %+v\n", packetResponse)
 		packetsChan <- packetResponse
 		delivery.Ack(false)
 	}

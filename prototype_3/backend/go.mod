@@ -8,3 +8,5 @@ require (
 )
 
 require github.com/google/btree v1.1.3
+
+require github.com/google/uuid v1.6.0

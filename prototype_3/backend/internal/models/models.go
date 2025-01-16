@@ -5,17 +5,13 @@ type IpCount struct {
 	Count   int64  `json:"count"`
 }
 
-// type ipCountItem struct {
-// 	*IpCount
-// }
-
 type Packet struct {
 	Metadata           MetadataResponse `json:"metadata"`
 	ClassificationTime float64          `json:"classification_time"`
 	Latency            float64          `json:"latency"`
-	IsMalicious        bool             `json:"is_malicious"`
 	WorkerName         string           `json:"worker_name"`
-	Timestamp          float64          `json:"timestamp"`
+	IsMalicious        bool             `json:"is_malicious"`
+	Timestamp          int64            `json:"timestamp"`
 }
 
 type MetadataResponse struct {
@@ -33,13 +29,7 @@ type StatsResponse struct {
 }
 
 type PacketWithStatsResponse struct {
-	ID      string        `json:"id"`
-	Stats   StatsResponse `json:"stats"`
+	ID      string         `json:"id"`
+	Stats   *StatsResponse `json:"stats"`
 	*Packet `json:"packet_info"`
-	// Metadata           MetadataResponse `json:"metadata"`
-	// ClassificationTime float64          `json:"classification_time"`
-	// Latency            float64          `json:"latency"`
-	// IsMalicious        bool             `json:"is_malicious"`
-	// WorkerName         string           `json:"worker_name"`
-	// Timestamp          float64          `json:"timestamp"`
 }

@@ -44,6 +44,17 @@ func (stats *PacketStats) Update(packet models.Packet) {
 	}
 }
 
+func (stats *PacketStats) GetStatsResponse(ipsAmount int) *models.StatsResponse {
+	maliciousIPs := stats.GetTopMaliciousIps(ipsAmount)
+	targetedIps := stats.GetTopTargetedIps(ipsAmount)
+	return &models.StatsResponse{
+		TotalPackets:   stats.TotalPackets,
+		TotalMalicious: stats.TotalMalicious,
+		MaliciousIps:   maliciousIPs,
+		TargetedIps:    targetedIps,
+	}
+}
+
 func (stats *PacketStats) GetTopMaliciousIps(n int) []*models.IpCount {
 	return stats.maliciousIps.GetTopIps(n)
 }
