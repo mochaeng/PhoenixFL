@@ -1,0 +1,9 @@
+{
+	"total_files": 2,
+	"processed_packets": 100000,
+	"timers": [
+		40,
+		40
+	],
+	"mean": 40
+}

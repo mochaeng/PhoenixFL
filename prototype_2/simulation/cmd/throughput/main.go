@@ -63,6 +63,7 @@ func runSingleSimulationRound(messages []*models.ClientRequest, numWorkers int, 
 			return fmt.Errorf("could not send message. Error: %w\n", err)
 		}
 	}
+	client.Stop()
 
 	log.Println("Creating workers...")
 	workers := make([]*mb.Worker, 0, numWorkers)
@@ -91,7 +92,6 @@ func runSingleSimulationRound(messages []*models.ClientRequest, numWorkers int, 
 		}(worker)
 	}
 	wg.Wait()
-	client.Stop()
 
 	return nil
 }
@@ -142,7 +142,7 @@ func main() {
 		log.Fatalf("could not resolve absolute path. Error: %v\n", err)
 	}
 
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 30; i++ {
 		if err := runSingleSimulationRound(
 			messages,
 			*numWorkers,

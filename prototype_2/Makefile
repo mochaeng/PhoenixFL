@@ -3,7 +3,6 @@ SHELL := /bin/bash
 # [change] this two variables based on your own paths
 CUDA_PATH := /usr/local/cuda-12.4
 TORCH_PATH := /usr/local/libtorch
-
 # lib and include paths
 CUDA_LIB := $(CUDA_PATH)/lib64
 TORCH_LIB := $(TORCH_PATH)/lib
@@ -18,7 +17,7 @@ export CUDACXX := $(CUDA_PATH)/bin/nvcc
 export LD_PRELOAD := $(CUDA_LIB)/libcudart.so $(TORCH_LIB)/libtorch_cuda.so
 
 
-WORKERS ?= 1
+WORKERS ?= 5
 IS_PUB ?= true
 MSG_LIMIT ?= 100_000
 WORKER_IDLE_TIMEOUT ?= 500ms
@@ -29,12 +28,13 @@ PREP_TIME ?= 6
 SIM_TIME ?= 60
 
 .PHONY: clean build-latency build-throughput run-latency run-throughput simulation-latency \
-		simulation-throughput clean-throughput
+		simulation-throughput clean-throughput run-normalflow build-normalflow
 
 clean:
 	rm -f data/workers/worker*
 	rm -f simulation/cmd/latency/prot2-simu
 	rm -f simulation/cmd/throughput/prot2-simu
+	rm -f simulation/cmd/normalflow/prot2-simu
 
 clean-throughput: clean
 	find data/workers -type f -name '*-simulation-throughput*' -regex '.*/[0-9]+-[0-9]+-simulation-throughput.*' \
@@ -45,6 +45,10 @@ build-latency:
 
 build-throughput:
 	cd simulation/cmd/throughput && go build -o prot2-simu *.go
+
+build-normalflow:
+	cd simulation/cmd/normalflow && go build -o prot2-simu *.go && \
+	chmod +x prot2-simu
 
 run-latency: build-latency
 	cd simulation/cmd/latency && \
@@ -58,6 +62,10 @@ run-throughput: build-throughput
 	cd simulation/cmd/throughput && \
 	( ./prot2-simu -workers=$(WORKERS) -msg-limit=$(MSG_LIMIT) \
 	               -idle-timeout=$(WORKER_IDLE_TIMEOUT) )
+
+run-normalflow: build-normalflow
+	cd simulation/cmd/normalflow && \
+	./prot2-simu -workers=$(WORKERS) -pub-interval=$(PUB_INTERVAL)
 
 simulation-latency: clean run-latency
 	@echo "Prototype 02 latency simulation finished."

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mochaeng/phoenix-detector/internal/config"
+	"github.com/mochaeng/phoenix-detector/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -149,4 +150,33 @@ func WaitForPublishConfirmation(confirmations <-chan amqp.Confirmation, sequence
 	case <-time.After(timeout):
 		return ErrPublishConfirmTimeout
 	}
+}
+
+func GetReadyClient(url string, messages []*models.ClientRequest, messageLimit uint64, publishInterval time.Duration) (*Client, error) {
+	client := NewClient(url, messages, 0, publishInterval)
+	err := client.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %v\n", err)
+	}
+	err = client.SetupClient()
+	if err != nil {
+		log.Panicf("Failed to set up client: %v\n", err)
+	}
+	return client, nil
+}
+
+func GetReadyWorkers(url, modelPath string, numWorkers int, idleTimeout *time.Duration) ([]*Worker, error) {
+	workers := make([]*Worker, 0, numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		worker := NewWorker(url, modelPath, "../../../data/workers", idleTimeout)
+		if err := worker.Connect(); err != nil {
+			return nil, fmt.Errorf("could not connect worker to rabbitMQ. Error: %w\n", err)
+		}
+		if err := worker.SetupWorker(); err != nil {
+			return nil, fmt.Errorf("could not setup worker. Error: %w\n", err)
+		}
+		// go worker.ConsumeRequestsQueue()
+		workers = append(workers, worker)
+	}
+	return workers, nil
 }

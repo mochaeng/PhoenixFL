@@ -1,0 +1,11 @@
+{
+	"total_files": 4,
+	"processed_packets": 100000,
+	"timers": [
+		27,
+		27,
+		27,
+		27
+	],
+	"mean": 27
+}
