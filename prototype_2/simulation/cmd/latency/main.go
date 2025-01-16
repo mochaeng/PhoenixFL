@@ -45,17 +45,12 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGUSR1, syscall.SIGTERM, os.Interrupt)
 
-	workers := make([]*mb.Worker, 0, *numWorkers)
-	for i := 0; i < *numWorkers; i++ {
-		worker := mb.NewWorker(config.AmqpURL, *modelPath, "../../../data/workers", nil)
-		if err := worker.Connect(); err != nil {
-			log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
-		}
-		if err := worker.SetupWorker(); err != nil {
-			log.Panicf("could not setup worker. Error: %v\n", err)
-		}
+	workers, err := mb.GetReadyWorkers(config.AmqpURL, *modelPath, *numWorkers, nil)
+	if err != nil {
+		log.Fatalf("failed to creatte workers. Error: %v\n", err)
+	}
+	for _, worker := range workers {
 		go worker.ConsumeRequestsQueue()
-		workers = append(workers, worker)
 	}
 
 	messages, err := parser.GetMessages(*csvPath)
@@ -63,14 +58,9 @@ func main() {
 		log.Panicf("failed to get messages. Error: %v\n", err)
 	}
 
-	client := mb.NewClient(config.AmqpURL, messages, *messageLimit, *publishInterval)
-	err = client.Connect()
+	client, err := mb.GetReadyClient(config.AmqpURL, messages, *messageLimit, *publishInterval)
 	if err != nil {
-		log.Panicf("Failed to connect: %v\n", err)
-	}
-	err = client.SetupClient()
-	if err != nil {
-		log.Panicf("Failed to set up client: %v\n", err)
+		log.Fatalf("failed to get client. Error: %v\n", err)
 	}
 
 	log.Println("Ready to start latencies simulations")

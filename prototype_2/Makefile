@@ -17,13 +17,16 @@ export CUDACXX := $(CUDA_PATH)/bin/nvcc
 export LD_PRELOAD := $(CUDA_LIB)/libcudart.so $(TORCH_LIB)/libtorch_cuda.so
 
 
-WORKERS ?= 5
+MODEL_PATH ?= "../../../data/fedmedian_model.pt"
+CSV_PATH ?= "../../../data/10_000-raw-packets.csv"
+WORKERS ?= 2
+
 IS_PUB ?= true
 MSG_LIMIT ?= 100_000
+PUB_INTERVAL ?= 1s
+
 WORKER_IDLE_TIMEOUT ?= 500ms
 
-
-PUB_INTERVAL ?= 5ms
 PREP_TIME ?= 6
 SIM_TIME ?= 60
 
@@ -37,8 +40,9 @@ clean:
 	rm -f simulation/cmd/normalflow/prot2-simu
 
 clean-throughput: clean
-	find data/workers -type f -name '*-simulation-throughput*' -regex '.*/[0-9]+-[0-9]+-simulation-throughput.*' \
-	                  -exec rm -f {} +
+	find data/workers -type f -name '*-simulation-throughput*' \
+	                  -regex '.*/[0-9]+-[0-9]+-simulation-throughput.*' \
+					  -exec rm -f {} +
 
 build-latency:
 	cd simulation/cmd/latency && go build -o prot2-simu *.go
@@ -47,13 +51,12 @@ build-throughput:
 	cd simulation/cmd/throughput && go build -o prot2-simu *.go
 
 build-normalflow:
-	cd simulation/cmd/normalflow && go build -o prot2-simu *.go && \
-	chmod +x prot2-simu
+	cd simulation/cmd/normalflow && go build -o prot2-simu main.go
 
 run-latency: build-latency
 	cd simulation/cmd/latency && \
 	( ./prot2-simu -workers=$(WORKERS) -ispub=$(IS_PUB) -pub-interval=$(PUB_INTERVAL) \
-	  -msg-limit=$(MSG_LIMIT) & \
+	               -msg-limit=$(MSG_LIMIT) -model=$(MODEL_PATH) -csv=$(CSV_PATH) & \
 	  mb_pid=$$! && echo $$mb_pid && sleep $(PREP_TIME) && \
 	  kill -SIGUSR1 $$mb_pid && sleep $(SIM_TIME) && \
 	  kill -SIGTERM $$mb_pid )
@@ -61,14 +64,18 @@ run-latency: build-latency
 run-throughput: build-throughput
 	cd simulation/cmd/throughput && \
 	( ./prot2-simu -workers=$(WORKERS) -msg-limit=$(MSG_LIMIT) \
-	               -idle-timeout=$(WORKER_IDLE_TIMEOUT) )
+	               -idle-timeout=$(WORKER_IDLE_TIMEOUT) -model=$(MODEL_PATH) -csv=$(CSV_PATH) )
 
 run-normalflow: build-normalflow
 	cd simulation/cmd/normalflow && \
-	./prot2-simu -workers=$(WORKERS) -pub-interval=$(PUB_INTERVAL)
+	./prot2-simu -workers=$(WORKERS) -pub-interval=$(PUB_INTERVAL) \
+	             -model=$(MODEL_PATH) -csv=$(CSV_PATH)
 
 simulation-latency: clean run-latency
-	@echo "Prototype 02 latency simulation finished."
+	@echo "Prototype 02 latency simulation has finished."
 
 simulation-throughput: clean run-throughput
-	@echo "Prototype 02 throughput simulation finished."
+	@echo "Prototype 02 throughput simulation has finished."
+
+simulation-normalflow: clean run-normalflow
+	@echo "Normalflow simulation has finished."

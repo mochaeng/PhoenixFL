@@ -46,16 +46,10 @@ func cleanWorkerIntermediateFiles(root string) error {
 func runSingleSimulationRound(messages []*models.ClientRequest, numWorkers int, messageLimit uint64, modelPath string, workerTimeout *time.Duration) error {
 	// we don't care about publish interval here.
 	// may I find a better way to model this
-	client := mb.NewClient(config.AmqpURL, messages, 0, 1*time.Second)
-	err := client.Connect()
+	client, err := mb.GetReadyClient(config.AmqpURL, messages, 0, 1*time.Second)
 	if err != nil {
-		return fmt.Errorf("failed to connect: %w\n", err)
+		return fmt.Errorf("failed to create client. Error: %v\n", err)
 	}
-	err = client.SetupClient()
-	if err != nil {
-		return fmt.Errorf("failed to set up client: %w\n", err)
-	}
-
 	log.Printf("client created \n filling the queue with [%d] packets...", messageLimit)
 	var i = uint64(0)
 	for i = 0; i < messageLimit; i++ {
@@ -66,17 +60,9 @@ func runSingleSimulationRound(messages []*models.ClientRequest, numWorkers int, 
 	client.Stop()
 
 	log.Println("Creating workers...")
-	workers := make([]*mb.Worker, 0, numWorkers)
-	for i := 0; i < numWorkers; i++ {
-		worker := mb.NewWorker(config.AmqpURL, modelPath, "../../../data/workers", workerTimeout)
-		if err := worker.Connect(); err != nil {
-			return fmt.Errorf("could not connect worker to rabbitMQ. Error: %w\n", err)
-		}
-		if err := worker.SetupWorker(); err != nil {
-			return fmt.Errorf("could not setup worker. Error: %w\n", err)
-		}
-		workers = append(workers, worker)
-		log.Printf("worker [%s] created\n", worker.Name)
+	workers, err := mb.GetReadyWorkers(config.AmqpURL, modelPath, numWorkers, workerTimeout)
+	if err != nil {
+		log.Fatalf("failed to create workers. Error: %v\n", err)
 	}
 
 	time.Sleep(35 * time.Second)

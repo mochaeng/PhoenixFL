@@ -1,4 +1,4 @@
-package normalflow
+package main
 
 import (
 	"flag"
@@ -44,15 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not create client. Error: %v\n", err)
 	}
-	// client := mb.NewClient(config.AmqpURL, messages, 0, *publishInterval)
-	// err = client.Connect()
-	// if err != nil {
-	// 	log.Panicf("Failed to connect: %v\n", err)
-	// }
-	// err = client.SetupClient()
-	// if err != nil {
-	// 	log.Panicf("Failed to set up client: %v\n", err)
-	// }
 	go client.StartPublishing()
 
 	workers, err := mb.GetReadyWorkers(config.AmqpURL, *modelPath, *numWorkers, nil)
@@ -62,19 +53,6 @@ func main() {
 	for _, worker := range workers {
 		go worker.ConsumeRequestsQueue()
 	}
-
-	// workers := make([]*mb.Worker, 0, *numWorkers)
-	// for i := 0; i < *numWorkers; i++ {
-	// 	worker := mb.NewWorker(config.AmqpURL, *modelPath, "../../../data/workers", nil)
-	// 	if err := worker.Connect(); err != nil {
-	// 		log.Panicf("could not connect worker to rabbitMQ. Error: %v\n", err)
-	// 	}
-	// 	if err := worker.SetupWorker(); err != nil {
-	// 		log.Panicf("could not setup worker. Error: %v\n", err)
-	// 	}
-	// 	go worker.ConsumeRequestsQueue()
-	// 	workers = append(workers, worker)
-	// }
 
 	for {
 		select {
