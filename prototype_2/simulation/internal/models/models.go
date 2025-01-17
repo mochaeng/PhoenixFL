@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type MetadataRequest struct {
 	SourceIP   string `json:"IPV4_SRC_ADDR"`
 	SourcePort int    `json:"L4_SRC_PORT"`
@@ -17,11 +15,11 @@ type ClientRequest struct {
 
 type ClassifiedPacket struct {
 	Metadata           MetadataRequest `json:"metadata"`
-	ClassificationTime time.Duration   `json:"classification_time"`
-	Latency            time.Duration   `json:"latency"`
+	ClassificationTime float64         `json:"classification_time"`
+	Latency            float64         `json:"latency"`
 	WorkerName         string          `json:"worker_name"`
 	IsMalicious        bool            `json:"is_malicious"`
-	Timestamp          time.Time       `json:"timestamp"`
+	Timestamp          int64           `json:"timestamp"`
 }
 
 type SimulationThroughputResult struct {

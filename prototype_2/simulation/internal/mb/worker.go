@@ -135,11 +135,11 @@ func (w *Worker) ConsumeRequestsQueue() {
 			publishAlertStartTime := time.Now()
 			alertMsg := models.ClassifiedPacket{
 				Metadata:           msg.Metadata,
-				ClassificationTime: classificationLatency,
-				Latency:            latency,
+				ClassificationTime: classificationLatency.Seconds(),
+				Latency:            latency.Seconds(),
 				WorkerName:         w.Name,
 				IsMalicious:        isMalicious,
-				Timestamp:          time.Now(),
+				Timestamp:          time.Now().Unix(),
 			}
 			if err := w.publishAlert(&alertMsg); err != nil {
 				log.Println(err)

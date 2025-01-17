@@ -19,16 +19,16 @@ export LD_PRELOAD := $(CUDA_LIB)/libcudart.so $(TORCH_LIB)/libtorch_cuda.so
 
 MODEL_PATH ?= "../../../data/fedmedian_model.pt"
 CSV_PATH ?= "../../../data/10_000-raw-packets.csv"
-WORKERS ?= 2
+WORKERS ?= 5
 
 IS_PUB ?= true
-MSG_LIMIT ?= 100_000
-PUB_INTERVAL ?= 1s
+MSG_LIMIT ?= 24_000
+PUB_INTERVAL ?= 5ms
 
-WORKER_IDLE_TIMEOUT ?= 500ms
+WORKER_IDLE_TIMEOUT ?= 20s
 
-PREP_TIME ?= 6
-SIM_TIME ?= 60
+PREP_TIME ?= 5
+SIM_TIME ?= 120
 
 .PHONY: clean build-latency build-throughput run-latency run-throughput simulation-latency \
 		simulation-throughput clean-throughput run-normalflow build-normalflow
@@ -55,21 +55,30 @@ build-normalflow:
 
 run-latency: build-latency
 	cd simulation/cmd/latency && \
-	( ./prot2-simu -workers=$(WORKERS) -ispub=$(IS_PUB) -pub-interval=$(PUB_INTERVAL) \
-	               -msg-limit=$(MSG_LIMIT) -model=$(MODEL_PATH) -csv=$(CSV_PATH) & \
+	( ./prot2-simu -workers=$(WORKERS) \
+	               -ispub=$(IS_PUB) \
+	               -pub-interval=$(PUB_INTERVAL) \
+	               -msg-limit=$(MSG_LIMIT) \
+				   -model=$(MODEL_PATH) \
+				   -csv=$(CSV_PATH) & \
 	  mb_pid=$$! && echo $$mb_pid && sleep $(PREP_TIME) && \
 	  kill -SIGUSR1 $$mb_pid && sleep $(SIM_TIME) && \
-	  kill -SIGTERM $$mb_pid )
+	  kill -SIGTERM $$mb_pid && wait $$mb_pid )
 
 run-throughput: build-throughput
 	cd simulation/cmd/throughput && \
-	( ./prot2-simu -workers=$(WORKERS) -msg-limit=$(MSG_LIMIT) \
-	               -idle-timeout=$(WORKER_IDLE_TIMEOUT) -model=$(MODEL_PATH) -csv=$(CSV_PATH) )
+	( ./prot2-simu -workers=$(WORKERS) \
+	               -msg-limit=$(MSG_LIMIT) \
+	               -idle-timeout=$(WORKER_IDLE_TIMEOUT) \
+				   -model=$(MODEL_PATH) \
+				   -csv=$(CSV_PATH) )
 
 run-normalflow: build-normalflow
 	cd simulation/cmd/normalflow && \
-	./prot2-simu -workers=$(WORKERS) -pub-interval=$(PUB_INTERVAL) \
-	             -model=$(MODEL_PATH) -csv=$(CSV_PATH)
+	./prot2-simu -workers=$(WORKERS) \
+	             -pub-interval=$(PUB_INTERVAL) \
+	             -model=$(MODEL_PATH) \
+				 -csv=$(CSV_PATH)
 
 simulation-latency: clean run-latency
 	@echo "Prototype 02 latency simulation has finished."

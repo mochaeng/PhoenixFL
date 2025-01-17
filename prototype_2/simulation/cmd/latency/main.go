@@ -77,6 +77,7 @@ func main() {
 			case syscall.SIGTERM, os.Interrupt:
 				log.Println("Stopping client and workers")
 				client.Stop()
+				time.Sleep(10 * time.Second)
 				for i := 0; i < len(workers); i++ {
 					workers[i].Stop()
 				}

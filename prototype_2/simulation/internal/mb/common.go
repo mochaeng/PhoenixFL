@@ -153,7 +153,7 @@ func WaitForPublishConfirmation(confirmations <-chan amqp.Confirmation, sequence
 }
 
 func GetReadyClient(url string, messages []*models.ClientRequest, messageLimit uint64, publishInterval time.Duration) (*Client, error) {
-	client := NewClient(url, messages, 0, publishInterval)
+	client := NewClient(url, messages, messageLimit, publishInterval)
 	err := client.Connect()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %v\n", err)
@@ -175,7 +175,6 @@ func GetReadyWorkers(url, modelPath string, numWorkers int, idleTimeout *time.Du
 		if err := worker.SetupWorker(); err != nil {
 			return nil, fmt.Errorf("could not setup worker. Error: %w\n", err)
 		}
-		// go worker.ConsumeRequestsQueue()
 		workers = append(workers, worker)
 	}
 	return workers, nil
