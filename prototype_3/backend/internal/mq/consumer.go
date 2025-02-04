@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/mochaeng/phoenixfl/internal/algorithms"
 	"github.com/mochaeng/phoenixfl/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -82,7 +81,7 @@ func ConsumeAlertsMessages(ch *amqp.Channel, queue *amqp.Queue, packetsChan chan
 		return err
 	}
 
-	stats := algorithms.NewPacketStats()
+	stats := algo.NewPacketStats()
 	for delivery := range msgs {
 		var packet models.Packet
 		err := json.Unmarshal([]byte(delivery.Body), &packet)

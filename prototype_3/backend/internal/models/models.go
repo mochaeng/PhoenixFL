@@ -22,10 +22,12 @@ type MetadataResponse struct {
 }
 
 type StatsResponse struct {
-	TotalPackets   int64      `json:"total_packets"`
-	TotalMalicious int64      `json:"total_malicious"`
-	MaliciousIps   []*IpCount `json:"malicious_ips"`
-	TargetedIps    []*IpCount `json:"targeted_ips"`
+	TotalPackets          int64             `json:"total_packets"`
+	TotalMalicious        int64             `json:"total_malicious"`
+	AvgLatency            float64           `json:"avg_latency"`
+	AvgClassificationTime float64           `json:"avg_classification_time"`
+	MaliciousIps          []*ItemCount[int] `json:"malicious_ips"`
+	TargetedIps           []*ItemCount[int] `json:"targeted_ips"`
 }
 
 type PacketWithStatsResponse struct {
