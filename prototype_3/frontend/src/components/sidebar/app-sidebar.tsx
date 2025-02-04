@@ -74,7 +74,7 @@ const data = {
       items: [
         {
           title: "Theme",
-          url: "#",
+          url: "",
         },
       ],
     },

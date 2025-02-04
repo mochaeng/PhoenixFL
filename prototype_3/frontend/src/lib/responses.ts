@@ -17,6 +17,8 @@ const statsSchema = z.object({
   total_malicious: z.number(),
   malicious_ips: z.array(ipCountSchema),
   targeted_ips: z.array(ipCountSchema),
+  avg_latency: z.number(),
+  avg_classification_time: z.number(),
 });
 export type StatsResponse = z.infer<typeof statsSchema>;
 

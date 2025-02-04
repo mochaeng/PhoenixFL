@@ -13,8 +13,11 @@ import {
   ChartTooltipContent,
 } from "../ui/chart";
 import { usePacketStore } from "@/store/packet";
+import { cn } from "@/lib/utils";
 
-export function PacketsPieChart() {
+export function PacketsPieChart({
+  className,
+}: React.HTMLAttributes<HTMLDivElement>) {
   const stats = usePacketStore((state) => state.stats);
 
   const formatter = new Intl.NumberFormat("en-US", {
@@ -47,7 +50,7 @@ export function PacketsPieChart() {
   } satisfies ChartConfig;
 
   return (
-    <Card className="flex flex-col">
+    <Card className={cn("flex w-full flex-col", className)}>
       <CardHeader className="items-center pb-0">
         <CardTitle>Malicious Packets - Pie Chart</CardTitle>
         <CardDescription>Normal and Malicious packets</CardDescription>

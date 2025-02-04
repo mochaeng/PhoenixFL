@@ -17,6 +17,8 @@ export const usePacketStore = create<PacketStore>()((set) => ({
   stats: {
     total_malicious: 0,
     total_packets: 0,
+    avg_classification_time: 0,
+    avg_latency: 0,
     malicious_ips: [],
     targeted_ips: [],
   },
@@ -28,8 +30,8 @@ export const usePacketStore = create<PacketStore>()((set) => ({
       }
       return {
         packets: updatedPackets,
-        totalCount: packet.stats.total_packets,
-        totalMalicious: packet.stats.total_malicious,
+        // totalCount: packet.stats.total_packets,
+        // totalMalicious: packet.stats.total_malicious,
         stats: packet.stats,
       };
     }),

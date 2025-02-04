@@ -62,9 +62,11 @@ export function NavMain({
                         asChild
                         isActive={location.pathname === subItem.url}
                       >
-                        <NavLink to={subItem.url}>
-                          <span>{subItem.title}</span>
-                        </NavLink>
+                        {subItem.url.length > 0 ? (
+                          <NavLink to={subItem.url}>
+                            <span>{subItem.title}</span>
+                          </NavLink>
+                        ) : null}
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}
