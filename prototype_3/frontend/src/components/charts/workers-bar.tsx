@@ -16,36 +16,38 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-const chartData = [
-  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-  { browser: "firefox", visitors: 187, fill: "var(--color-firefox)" },
-  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-  { browser: "other", visitors: 90, fill: "var(--color-other)" },
-];
+import { usePacketStore } from "@/store/packet";
+
+// const chartData = [
+//   { key: "ud1", value: 275, fill: "var(--color-ud1)" },
+//   { key: "ud2", value: 200, fill: "var(--color-ud2)" },
+//   { key: "ud3", value: 187, fill: "var(--color-ud3)" },
+//   { key: "ud4", value: 173, fill: "var(--color-ud4)" },
+//   { key: "ud5", value: 90, fill: "var(--color-ud5)" },
+// ];
 
 const chartConfig = {
-  visitors: {
+  count: {
     label: "Visitors",
   },
-  chrome: {
-    label: "Worker 1",
+  worker1: {
+    label: "DU-1",
     color: "hsl(var(--chart-1))",
   },
-  safari: {
-    label: "Safari",
+  worker2: {
+    label: "DU-2",
     color: "hsl(var(--chart-2))",
   },
-  firefox: {
-    label: "Firefox",
+  worker3: {
+    label: "DU-3",
     color: "hsl(var(--chart-3))",
   },
-  edge: {
-    label: "Edge",
+  worker4: {
+    label: "DU-4",
     color: "hsl(var(--chart-4))",
   },
-  other: {
-    label: "Other",
+  worker5: {
+    label: "DU-5",
     color: "hsl(var(--chart-5))",
   },
 } satisfies ChartConfig;
@@ -53,6 +55,25 @@ const chartConfig = {
 export function WorkersBarChart({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) {
+  const chartData = [
+    { key: "worker1", value: 0, fill: "var(--color-worker1)" },
+    { key: "worker2", value: 0, fill: "var(--color-worker2)" },
+    { key: "worker3", value: 0, fill: "var(--color-worker3)" },
+    { key: "worker4", value: 0, fill: "var(--color-worker4)" },
+    { key: "worker5", value: 0, fill: "var(--color-worker5)" },
+  ];
+
+  const classifications = usePacketStore(
+    (state) => state.stats.workers_classifications,
+  );
+
+  classifications.forEach((classfication) => {
+    const idx = chartData.findIndex((data) => data.key === classfication.key);
+    if (idx > -1) {
+      chartData[idx].value = classfication.value;
+    }
+  });
+
   return (
     <Card className={cn("flex w-full flex-col", className)}>
       <CardHeader>
@@ -70,7 +91,7 @@ export function WorkersBarChart({
             }}
           >
             <YAxis
-              dataKey="browser"
+              dataKey="key"
               type="category"
               tickLine={false}
               tickMargin={0}
@@ -79,12 +100,12 @@ export function WorkersBarChart({
                 chartConfig[value as keyof typeof chartConfig]?.label
               }
             />
-            <XAxis dataKey="visitors" type="number" hide />
+            <XAxis dataKey="value" type="number" hide />
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
-            <Bar dataKey="visitors" layout="vertical" radius={5} />
+            <Bar dataKey="value" layout="vertical" radius={5} />
           </BarChart>
         </ChartContainer>
       </CardContent>

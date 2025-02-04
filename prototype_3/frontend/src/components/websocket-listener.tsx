@@ -35,7 +35,7 @@ export function WebsocketListener() {
         );
         return;
       }
-      // console.log(parsed.data);
+      console.log(parsed.data);
       addPacket(parsed.data);
     }
   }, [lastMessage, addPacket]);

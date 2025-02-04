@@ -7,16 +7,17 @@ const metadataSchema = z.object({
   l4_dst_port: z.number(),
 });
 
-const ipCountSchema = z.object({
-  address: z.string(),
-  count: z.number(),
+const itemCountSchema = z.object({
+  key: z.string(),
+  value: z.number(),
 });
 
 const statsSchema = z.object({
   total_packets: z.number(),
   total_malicious: z.number(),
-  malicious_ips: z.array(ipCountSchema),
-  targeted_ips: z.array(ipCountSchema),
+  malicious_ips: z.array(itemCountSchema),
+  targeted_ips: z.array(itemCountSchema),
+  workers_classifications: z.array(itemCountSchema),
   avg_latency: z.number(),
   avg_classification_time: z.number(),
 });

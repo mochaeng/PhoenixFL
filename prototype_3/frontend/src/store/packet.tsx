@@ -21,6 +21,7 @@ export const usePacketStore = create<PacketStore>()((set) => ({
     avg_latency: 0,
     malicious_ips: [],
     targeted_ips: [],
+    workers_classifications: [],
   },
   addPacket: (packet) =>
     set((state) => {

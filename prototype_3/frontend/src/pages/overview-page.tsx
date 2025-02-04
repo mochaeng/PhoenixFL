@@ -14,7 +14,6 @@ export function OverviewPage() {
       <div className="flex w-full flex-wrap justify-center bg-yellow-500">
         <div className="inline-flex w-full flex-wrap justify-center gap-4">
           <PacketsPieChart className="w-[450px]" />
-          <IpsBarChart className="w-[450px]" />
           <WorkersBarChart className="w-[450px]" />
         </div>
       </div>

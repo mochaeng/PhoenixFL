@@ -53,7 +53,7 @@ export function MainStatsCards() {
   return (
     <div className="flex flex-wrap justify-center gap-6 p-2">
       {data.map((card) => (
-        <Card key={card.title} className="w-full max-w-[330px]">
+        <Card key={card.title} className="w-full max-w-[300px]">
           <CardHeader className="h-32">
             <CardTitle>{card.title}</CardTitle>
             <CardDescription>{card.description}</CardDescription>

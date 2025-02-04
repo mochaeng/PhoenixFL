@@ -47,8 +47,8 @@ export function IpsTable() {
               <TableBody>
                 {info.ips.map((ip, idx) => (
                   <TableRow key={idx}>
-                    <TableCell>{ip.address}</TableCell>
-                    <TableCell>{ip.count}</TableCell>
+                    <TableCell>{ip.key}</TableCell>
+                    <TableCell>{ip.value}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
