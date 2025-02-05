@@ -57,14 +57,14 @@ const data = {
           title: "Most recent",
           url: "/dashboard/recent",
         },
-        {
-          title: "Malicious activity",
-          url: "/dashboard/malicious",
-        },
-        {
-          title: "System performance",
-          url: "/dashboard/performance",
-        },
+        // {
+        //   title: "Malicious activity",
+        //   url: "/dashboard/malicious",
+        // },
+        // {
+        //   title: "System performance",
+        //   url: "/dashboard/performance",
+        // },
       ],
     },
     {

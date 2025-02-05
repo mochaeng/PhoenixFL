@@ -7,6 +7,7 @@ import {
 import ErrorPage from "./pages/error-page";
 import RootLayout from "./pages/root-layout";
 import { OverviewPage } from "./pages/overview-page";
+import { RecentPage } from "./pages/recent-page";
 
 const router = createBrowserRouter([
   {
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="overview" replace /> },
           { path: "overview", element: <OverviewPage /> },
-          { path: "recent", element: <div>Recent</div> },
+          { path: "recent", element: <RecentPage /> },
           { path: "malicious", element: <div>Malicious activity</div> },
           { path: "performance", element: <div>Performance</div> },
         ],
