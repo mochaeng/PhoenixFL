@@ -1,29 +1,42 @@
 import { Label, Pie, PieChart } from "recharts";
+
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "../ui/chart";
+} from "@/components/ui/chart";
 import { usePacketStore } from "@/store/packet";
 import { cn } from "@/lib/utils";
+
+const chartConfig = {
+  normal: {
+    label: "Normal",
+    color: "hsl(var(--chart-2))",
+  },
+  malicious: {
+    label: "Malicious",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
+
+const formatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  compactDisplay: "short",
+});
 
 export function PacketsPieChart({
   className,
 }: React.HTMLAttributes<HTMLDivElement>) {
   const stats = usePacketStore((state) => state.stats);
-
-  const formatter = new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    compactDisplay: "short",
-  });
 
   const chartData = [
     {
@@ -38,22 +51,13 @@ export function PacketsPieChart({
     },
   ];
 
-  const chartConfig = {
-    normal: {
-      label: "Normal",
-      color: "hsl(var(--chart-2))",
-    },
-    malicious: {
-      label: "Malicious",
-      color: "hsl(var(--chart-1))",
-    },
-  } satisfies ChartConfig;
-
   return (
-    <Card className={cn("flex w-full flex-col", className)}>
+    <Card className={cn("flex flex-col", className)}>
       <CardHeader className="items-center pb-0">
-        <CardTitle>Malicious Packets - Pie Chart</CardTitle>
-        <CardDescription>Normal and Malicious packets</CardDescription>
+        <CardTitle>Malicious Packets</CardTitle>
+        <CardDescription>
+          Distribution of malicious and normal network packets.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -63,7 +67,7 @@ export function PacketsPieChart({
           <PieChart>
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent className="" hideLabel />}
+              content={<ChartTooltipContent hideLabel />}
             />
             <Pie
               data={chartData}
@@ -94,7 +98,7 @@ export function PacketsPieChart({
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          packets
+                          Packets
                         </tspan>
                       </text>
                     );
@@ -105,6 +109,14 @@ export function PacketsPieChart({
           </PieChart>
         </ChartContainer>
       </CardContent>
+      <CardFooter className="flex-col gap-2 text-sm">
+        <div className="flex items-center gap-2 font-medium leading-none">
+          Proportion of malicious and normal network traffic.
+        </div>
+        <div className="leading-none text-muted-foreground">
+          Useful for tracking malicious activity over time.
+        </div>
+      </CardFooter>
     </Card>
   );
 }

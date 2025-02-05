@@ -1,4 +1,3 @@
-import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
 import {
@@ -17,14 +16,6 @@ import {
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { usePacketStore } from "@/store/packet";
-
-// const chartData = [
-//   { key: "ud1", value: 275, fill: "var(--color-ud1)" },
-//   { key: "ud2", value: 200, fill: "var(--color-ud2)" },
-//   { key: "ud3", value: 187, fill: "var(--color-ud3)" },
-//   { key: "ud4", value: 173, fill: "var(--color-ud4)" },
-//   { key: "ud5", value: 90, fill: "var(--color-ud5)" },
-// ];
 
 const chartConfig = {
   count: {
@@ -77,8 +68,10 @@ export function WorkersBarChart({
   return (
     <Card className={cn("flex w-full flex-col", className)}>
       <CardHeader>
-        <CardTitle>Bar Chart - Mixed</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardTitle>Classifications made by DUs</CardTitle>
+        <CardDescription>
+          Includes both normal and malicious traffic classifications.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -111,10 +104,11 @@ export function WorkersBarChart({
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          Amount of classifications made by each Detection Unit.
         </div>
         <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
+          Helps monitor the workload and efficiency of each Detection Unit in
+          real time.
         </div>
       </CardFooter>
     </Card>

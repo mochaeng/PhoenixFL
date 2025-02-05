@@ -1,4 +1,3 @@
-import { IpsBarChart } from "@/components/charts/ips-bar";
 import { PacketsPieChart } from "@/components/charts/packets-pie";
 import { WorkersBarChart } from "@/components/charts/workers-bar";
 import { IpsTable } from "@/components/home/ips-table";
