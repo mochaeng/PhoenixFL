@@ -9,7 +9,9 @@
 
 PhoenixFL is an asynchronous and high-performance solution for classifying network packets in heterogeneous IoT environments using neural networks. It leverages federated learning to train models while preserving participant data privacy. Additionally, it includes a web interface for real-time visualization of system classifications.
 
-## Demo
+## Web Interface Demo
+
+https://github.com/user-attachments/assets/a53c4300-abc8-4853-9e3d-6e5c47cb9cd2
 
 ## Design
 
